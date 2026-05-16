@@ -1,0 +1,268 @@
+import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../../api';
+import BulkUpload from '../components/BulkUpload';
+import { useLocation } from 'react-router-dom';
+
+const Categories = () => {
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const initialTab = queryParams.get('type') || 'product';
+  
+  const [activeTab, setActiveTab] = useState(initialTab); // 'product' or 'blog'
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editCategory, setEditCategory] = useState(null);
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    description: '', 
+    parentCategory: '', 
+    image: '', 
+    displayOrder: 0,
+    type: 'product' 
+  });
+  
+  useEffect(() => {
+    const type = queryParams.get('type') || 'product';
+    setActiveTab(type);
+  }, [location.search]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [activeTab]);
+
+  const fetchCategories = async () => {
+    setLoading(true);
+    try {
+      const data = await apiFetch(`/categories?type=${activeTab}`);
+      setCategories(data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const endpoint = editCategory ? `/categories/${editCategory._id}` : '/categories';
+    const method = editCategory ? 'PUT' : 'POST';
+
+    try {
+      await apiFetch(endpoint, {
+        method,
+        body: JSON.stringify(formData),
+      });
+      setShowModal(false);
+      fetchCategories();
+    } catch (err) {
+      alert("Error saving category: " + err.message);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure? This will not delete items in this category, but they will become uncategorized.")) {
+      try {
+        await apiFetch(`/categories/${id}`, { method: 'DELETE' });
+        fetchCategories();
+      } catch (err) {
+        alert("Error deleting category: " + err.message);
+      }
+    }
+  };
+
+  const openEdit = (c) => {
+    setEditCategory(c);
+    setFormData({
+      name: c.name || '',
+      description: c.description || '',
+      parentCategory: c.parentCategory?._id || c.parentCategory || '',
+      image: c.image || '',
+      displayOrder: c.displayOrder || 0,
+      type: c.type || activeTab
+    });
+    setShowModal(true);
+  };
+
+  const openAdd = () => {
+    setEditCategory(null);
+    setFormData({ 
+      name: '', 
+      description: '', 
+      parentCategory: '', 
+      image: '', 
+      displayOrder: categories.length > 0 ? Math.max(...categories.map(c => c.displayOrder || 0)) + 1 : 1,
+      type: activeTab 
+    });
+    setShowModal(true);
+  };
+
+  return (
+    <div className="admin-page categories">
+      <div className="page-header">
+        <div>
+          <h1>Category Management</h1>
+          <div className="tab-switcher" style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+            <button 
+              className={`tab-btn ${activeTab === 'product' ? 'active' : ''}`}
+              onClick={() => setActiveTab('product')}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '10px 0',
+                borderBottom: activeTab === 'product' ? '2px solid #ff6b00' : 'none',
+                color: activeTab === 'product' ? '#ff6b00' : '#666',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              🛒 Product Categories
+            </button>
+            <button 
+              className={`tab-btn ${activeTab === 'blog' ? 'active' : ''}`}
+              onClick={() => setActiveTab('blog')}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '10px 0',
+                borderBottom: activeTab === 'blog' ? '2px solid #ff6b00' : 'none',
+                color: activeTab === 'blog' ? '#ff6b00' : '#666',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              📝 Blog Categories
+            </button>
+          </div>
+        </div>
+        <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {activeTab === 'product' && (
+            <BulkUpload endpoint="/categories/bulk" onComplete={fetchCategories} label="Bulk Upload" />
+          )}
+          <button className="btn-primary" onClick={openAdd}>+ Add {activeTab === 'blog' ? 'Blog' : ''} Category</button>
+        </div>
+      </div>
+
+      {loading ? <p>Loading...</p> : (
+        <div className="admin-table-wrapper">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Category Name</th>
+                <th>Parent</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories.map(c => (
+                <tr key={c._id}>
+                  <td style={{ width: '80px', fontWeight: 800, color: '#ff6b00' }}>#{c.displayOrder || 0}</td>
+                  <td>
+                    <div style={{ fontWeight: 800 }}>{c.name}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#999' }}>{c.description?.substring(0, 50)}{c.description?.length > 50 ? '...' : ''}</div>
+                  </td>
+                  <td>
+                    {c.parentCategory ? (
+                      <span className="status-pill processing">
+                        {categories.find(pc => pc._id === (c.parentCategory?._id || c.parentCategory))?.name || 'Sub-Category'}
+                      </span>
+                    ) : (
+                      <span className="status-pill shipped">Root Category</span>
+                    )}
+                  </td>
+                  <td>
+                    <button className="btn-icon" onClick={() => openEdit(c)}>✏️</button>
+                    <button className="btn-icon delete" onClick={() => handleDelete(c._id)}>🗑️</button>
+                  </td>
+                </tr>
+              ))}
+              {categories.length === 0 && (
+                <tr>
+                  <td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                    No {activeTab} categories found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showModal && (
+        <div className="admin-modal-overlay">
+          <div className="admin-modal">
+            <h2>{editCategory ? 'Edit' : 'Add'} {activeTab === 'blog' ? 'Blog' : 'Product'} Category</h2>
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label>Category Name</label>
+                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+              </div>
+
+              <div className="form-group">
+                <label>Category Type</label>
+                <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input 
+                      type="radio" 
+                      name="type" 
+                      value="product" 
+                      checked={formData.type === 'product'} 
+                      onChange={e => setFormData({...formData, type: e.target.value})}
+                    />
+                    Product
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input 
+                      type="radio" 
+                      name="type" 
+                      value="blog" 
+                      checked={formData.type === 'blog'} 
+                      onChange={e => setFormData({...formData, type: e.target.value})}
+                    />
+                    Blog
+                  </label>
+                </div>
+              </div>
+              
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Parent Category</label>
+                  <select value={formData.parentCategory} onChange={e => setFormData({...formData, parentCategory: e.target.value})}>
+                    <option value="">None (Main Category)</option>
+                    {categories
+                      .filter(c => c._id !== editCategory?._id && c.type === formData.type)
+                      .map(c => (
+                        <option key={c._id} value={c._id}>{c.name}</option>
+                      ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Display Order</label>
+                  <input type="number" value={formData.displayOrder} onChange={e => setFormData({...formData, displayOrder: e.target.value})} />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Description</label>
+                <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows="3"></textarea>
+              </div>
+
+              <div className="form-group">
+                <label>Category Image URL</label>
+                <input type="text" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} placeholder="https://..." />
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">Save Category</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Categories;
