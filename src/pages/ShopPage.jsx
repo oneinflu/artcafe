@@ -35,11 +35,16 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
   const [maxPrice, setMaxPrice] = useState(100000);
   const [curationTab, setCurationTab] = useState('collections');
 
-  // Filter IDs state
+    // Filter IDs state
   const [selectedCollections, setSelectedCollections] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedSpaces, setSelectedSpaces] = useState([]);
   const [selectedStyles, setSelectedStyles] = useState([]);
+
+  // Scroll to top on mount / opening of Shop Page
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   // Sync with URL query parameters on mount or change
   useEffect(() => {
