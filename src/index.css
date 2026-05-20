@@ -4847,6 +4847,35 @@ button {
   letter-spacing: 0.1em;
 }
 
+/* SHOP CURATION TABS SLIDER CSS */
+.shop-curation-slider {
+  margin-top: -20px;
+}
+
+.curation-cards-row::-webkit-scrollbar {
+  height: 5px;
+}
+.curation-cards-row::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 3px;
+}
+.curation-cards-row::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+.curation-cards-row::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.curation-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+}
+
+.curation-card:hover .card-image-bg {
+  transform: scale(1.06);
+}
+
 /* PRODUCT DETAIL LUXURY STYLES */
 .product-detail-luxury.light-theme {
   background: #ffffff;
