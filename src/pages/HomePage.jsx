@@ -1169,7 +1169,6 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                     <select 
                       value={advisoryForm.spaceType} 
                       onChange={e => setAdvisoryForm({ ...advisoryForm, spaceType: e.target.value })}
-                      style={{ width: '100%', background: '#111', color: '#fff', border: '1px solid #333', padding: '12px' }}
                     >
                       <option value="">Select Space Type...</option>
                       <option value="Living Room">Living Room</option>
@@ -1185,7 +1184,6 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                     <select 
                       value={advisoryForm.preferredStyle} 
                       onChange={e => setAdvisoryForm({ ...advisoryForm, preferredStyle: e.target.value })}
-                      style={{ width: '100%', background: '#111', color: '#fff', border: '1px solid #333', padding: '12px' }}
                     >
                       <option value="">Select Preferred Style...</option>
                       <option value="Abstract Modern">Abstract Modern</option>
@@ -1201,7 +1199,6 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                   <select 
                     value={advisoryForm.budgetRange} 
                     onChange={e => setAdvisoryForm({ ...advisoryForm, budgetRange: e.target.value })}
-                    style={{ width: '100%', background: '#111', color: '#fff', border: '1px solid #333', padding: '12px' }}
                   >
                     <option value="">Select Estimated Budget Range...</option>
                     <option value="Under ₹50,000">Under ₹50,000</option>

@@ -6169,6 +6169,7 @@ button {
 }
 
 .form-group-luxury input,
+.form-group-luxury select,
 .form-group-luxury textarea {
   width: 100%;
   padding: 15px;
@@ -6182,6 +6183,7 @@ button {
 }
 
 .form-group-luxury input:focus,
+.form-group-luxury select:focus,
 .form-group-luxury textarea:focus {
   outline: none;
   border-color: var(--color-gold);
