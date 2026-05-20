@@ -8,6 +8,11 @@ const ArchitectSchema = new mongoose.Schema({
   email: { type: String },
   specialty: { type: String },
   commission: { type: Number, default: 0 },
+  category: { 
+    type: String, 
+    enum: ['Interior Designer', 'Architect', 'Real Estate Developer', 'Art Consultant'], 
+    default: 'Architect' 
+  },
   couponCode: { type: String },
   projectsCount: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }

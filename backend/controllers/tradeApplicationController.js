@@ -53,35 +53,45 @@ exports.updateTradeApplicationStatus = async (req, res) => {
 
     let responseData = { application };
 
-    // If approved and the role is 'Architect', create the User and Architect documents
-    if (status === 'approved' && application.role === 'Architect') {
+    // If approved and the role is one of the Trade Partner roles, create the User and Partner (Architect model) documents
+    const tradeRoles = ['Interior Designer', 'Architect', 'Real Estate Developer', 'Art Consultant'];
+    if (status === 'approved' && tradeRoles.includes(application.role)) {
       const commissionVal = Number(commission) || 0;
       
+      // Get role prefix for referral coupon code
+      let rolePrefix = 'TRD';
+      if (application.role === 'Interior Designer') rolePrefix = 'DSGN';
+      else if (application.role === 'Architect') rolePrefix = 'ARCH';
+      else if (application.role === 'Real Estate Developer') rolePrefix = 'DEV';
+      else if (application.role === 'Art Consultant') rolePrefix = 'CONS';
+
       // Auto-generate Coupon/Referral Code if not provided
       let finalCouponCode = couponCode;
       if (!finalCouponCode) {
         const cleanName = application.name.replace(/[^a-zA-Z]/g, '').toUpperCase().substring(0, 5);
-        finalCouponCode = `ARCH-${cleanName}-${Math.floor(100 + Math.random() * 900)}`;
+        finalCouponCode = `${rolePrefix}-${cleanName}-${Math.floor(100 + Math.random() * 900)}`;
       }
 
-      // Check if Architect already exists
-      let architect = await Architect.findOne({ email: application.email });
-      if (!architect) {
-        architect = new Architect({
+      // Check if Partner already exists in Architect collection
+      let partner = await Architect.findOne({ email: application.email });
+      if (!partner) {
+        partner = new Architect({
           name: application.name,
           email: application.email,
           firm: application.company,
           commission: commissionVal,
           couponCode: finalCouponCode,
-          bio: 'Approved via Trade Program',
+          category: application.role,
+          bio: `Approved ${application.role} via Trade Program`,
           projectsCount: 0
         });
-        await architect.save();
+        await partner.save();
       } else {
-        // Update existing architect
-        architect.commission = commissionVal;
-        architect.couponCode = finalCouponCode;
-        await architect.save();
+        // Update existing partner
+        partner.commission = commissionVal;
+        partner.couponCode = finalCouponCode;
+        partner.category = application.role;
+        await partner.save();
       }
 
       // Check if User already exists
@@ -95,7 +105,7 @@ exports.updateTradeApplicationStatus = async (req, res) => {
           name: application.name,
           email: application.email,
           password: tempPassword,
-          role: 'architect',
+          role: 'architect', // 'architect' is the login account role for all trade partners
           phone: application.phone
         });
         await user.save();
@@ -108,7 +118,7 @@ exports.updateTradeApplicationStatus = async (req, res) => {
 
       responseData = {
         application,
-        architect,
+        architect: partner,
         couponCode: finalCouponCode,
         tempPassword,
         userCreated,

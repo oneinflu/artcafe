@@ -32,10 +32,17 @@ const TradeApplications = () => {
   };
 
   const handleStatusUpdate = async (app, status) => {
-    if (status === 'approved' && app.role === 'Architect') {
-      // Auto-generate a beautiful Referral / Coupon Code
+    const tradeRoles = ['Interior Designer', 'Architect', 'Real Estate Developer', 'Art Consultant'];
+    if (status === 'approved' && tradeRoles.includes(app.role)) {
+      // Auto-generate a beautiful Referral / Coupon Code based on role
+      let rolePrefix = 'TRD';
+      if (app.role === 'Interior Designer') rolePrefix = 'DSGN';
+      else if (app.role === 'Architect') rolePrefix = 'ARCH';
+      else if (app.role === 'Real Estate Developer') rolePrefix = 'DEV';
+      else if (app.role === 'Art Consultant') rolePrefix = 'CONS';
+
       const cleanName = app.name.replace(/[^a-zA-Z]/g, '').toUpperCase().substring(0, 5);
-      const generatedCode = `ARCH-${cleanName}-${Math.floor(100 + Math.random() * 900)}`;
+      const generatedCode = `${rolePrefix}-${cleanName}-${Math.floor(100 + Math.random() * 900)}`;
       
       setSelectedApp(app);
       setCommission(10);
@@ -44,7 +51,7 @@ const TradeApplications = () => {
       return;
     }
 
-    // Direct update for other roles / statuses
+    // Direct update for other roles / statuses (like rejection)
     if (!window.confirm(`Are you sure you want to change status to ${status}?`)) return;
     
     try {
@@ -76,6 +83,7 @@ const TradeApplications = () => {
       // Store credentials to show the admin
       setCredentials({
         name: selectedApp.name,
+        role: selectedApp.role,
         email: selectedApp.email,
         tempPassword: res.tempPassword,
         couponCode: res.couponCode,
@@ -85,7 +93,7 @@ const TradeApplications = () => {
       setShowCredentialsModal(true);
       fetchApplications();
     } catch (err) {
-      alert("Error approving architect: " + err.message);
+      alert("Error approving partner: " + err.message);
     } finally {
       setSaving(false);
     }
@@ -203,7 +211,7 @@ const TradeApplications = () => {
             width: '450px',
             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.25)'
           }}>
-            <h2 style={{ marginBottom: '10px', fontFamily: 'serif', fontWeight: 500 }}>Approve Architect Partner</h2>
+            <h2 style={{ marginBottom: '10px', fontFamily: 'serif', fontWeight: 500 }}>Approve {selectedApp?.role} Partner</h2>
             <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '25px' }}>
               Define the commission structure and create the referral coupon code for <strong>{selectedApp?.name}</strong>.
             </p>
@@ -298,9 +306,9 @@ const TradeApplications = () => {
             width: '500px',
             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.25)'
           }}>
-            <h2 style={{ marginBottom: '10px', fontFamily: 'serif', fontWeight: 500, color: '#28a745' }}>✓ Architect Approved</h2>
+            <h2 style={{ marginBottom: '10px', fontFamily: 'serif', fontWeight: 500, color: '#28a745' }}>✓ Partner Approved</h2>
             <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '25px' }}>
-              The profile has been successfully generated. Below are their partner credentials and login details.
+              The {credentials.role} partner profile has been successfully generated. Below are their credentials.
             </p>
 
             <div style={{
@@ -314,6 +322,7 @@ const TradeApplications = () => {
               lineHeight: '1.6'
             }}>
               <div><strong>Name:</strong> {credentials.name}</div>
+              <div><strong>Role:</strong> {credentials.role}</div>
               <div><strong>Email/Username:</strong> {credentials.email}</div>
               <div>
                 <strong>Password:</strong> {credentials.tempPassword ? (
@@ -337,7 +346,7 @@ const TradeApplications = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <button
                 onClick={() => {
-                  const summaryText = `Name: ${credentials.name}\nEmail: ${credentials.email}\nPassword: ${credentials.tempPassword || 'Existing Account'}\nReferral Code: ${credentials.couponCode}\nCommission: ${credentials.commission}%`;
+                  const summaryText = `Name: ${credentials.name}\nRole: ${credentials.role}\nEmail: ${credentials.email}\nPassword: ${credentials.tempPassword || 'Existing Account'}\nReferral Code: ${credentials.couponCode}\nCommission: ${credentials.commission}%`;
                   copyToClipboard(summaryText);
                 }}
                 style={{

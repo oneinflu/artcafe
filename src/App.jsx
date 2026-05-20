@@ -28,7 +28,7 @@ import CaseStudies from './admin/pages/CaseStudies';
 import RentalProducts from './admin/pages/RentalProducts';
 import ActiveRentals from './admin/pages/ActiveRentals';
 import Artists from './admin/pages/Artists';
-import Architects from './admin/pages/Architects';
+import TradePartners from './admin/pages/TradePartners';
 import ExclusiveProducts from './admin/pages/ExclusiveProducts';
 import AdminLogin from './admin/pages/AdminLogin';
 
@@ -134,7 +134,7 @@ function App() {
           <Route path="pricing-simulator" element={<PricingSimulator />} />
           <Route path="case-studies" element={<CaseStudies />} />
           <Route path="artists" element={<Artists />} />
-          <Route path="architects" element={<Architects />} />
+          <Route path="trade-partners" element={<TradePartners />} />
         </Route>
 
         {/* Storefront Routes */}
