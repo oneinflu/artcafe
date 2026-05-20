@@ -38,7 +38,7 @@ console.log('Routes registered.');
 app.use(express.static(path.join(__dirname, '../dist')));
 
 // Wildcard route to handle React Router client-side routing
-app.get('*', (req, res, next) => {
+app.get('/*splat', (req, res, next) => {
   // If the request is for API or uploads, pass it to the 404/API handlers
   if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
     return next();
