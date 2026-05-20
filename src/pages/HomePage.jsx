@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { resolveImageUrl, slugify } from '../utils/helpers';
-import { apiFetch } from '../api';
+import BASE_URL, { apiFetch } from '../api';
 
 
 
@@ -76,6 +76,20 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
     }, 6000);
     return () => clearInterval(timer);
   }, [actualCaseStudies.length]);
+
+  const [brandLogos, setBrandLogos] = useState([]);
+
+  useEffect(() => {
+    const fetchBrandLogos = async () => {
+      try {
+        const data = await apiFetch('/brand-logos');
+        setBrandLogos(data);
+      } catch (err) {
+        console.error("Error fetching brand logos:", err);
+      }
+    };
+    fetchBrandLogos();
+  }, []);
 
   // Calculate dynamic collections with API integration
   const fallbackCollectionImages = [
@@ -961,15 +975,44 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
 
           <div className="institution-logos">
             <span className="logo-label">TRUSTED BY INDIA'S FINEST INSTITUTIONS</span>
-            <div className="logo-strip">
-              <span>Taj Hotels</span>
-              <span>ITC Hotels</span>
-              <span>The Leela</span>
-              <span>Apollo</span>
-              <span>RMZ Corp</span>
-              <span>Prestige</span>
-              <span>Brigade Group</span>
-              <span>Marriott</span>
+            <div className="logo-strip" style={{ display: 'flex', flexWrap: 'wrap', gap: '30px', alignItems: 'center', justifyContent: 'center' }}>
+              {brandLogos && brandLogos.length > 0 ? (
+                brandLogos.map(logo => (
+                  <img 
+                    key={logo._id} 
+                    src={logo.image.startsWith('http') ? logo.image : `${BASE_URL}${logo.image}`} 
+                    alt={logo.name} 
+                    title={logo.name}
+                    style={{
+                      maxHeight: '40px',
+                      maxWidth: '120px',
+                      objectFit: 'contain',
+                      opacity: 0.7,
+                      filter: 'grayscale(100%) contrast(200%)',
+                      transition: 'opacity 0.3s ease, filter 0.3s ease'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.opacity = 1;
+                      e.currentTarget.style.filter = 'grayscale(0%)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.opacity = 0.7;
+                      e.currentTarget.style.filter = 'grayscale(100%) contrast(200%)';
+                    }}
+                  />
+                ))
+              ) : (
+                <>
+                  <span>Taj Hotels</span>
+                  <span>ITC Hotels</span>
+                  <span>The Leela</span>
+                  <span>Apollo</span>
+                  <span>RMZ Corp</span>
+                  <span>Prestige</span>
+                  <span>Brigade Group</span>
+                  <span>Marriott</span>
+                </>
+              )}
             </div>
             <div className="logo-footer">
               <p>Art enhances every workspace — let us curate yours.</p>
@@ -981,56 +1024,6 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 JOIN THE TRADE PROGRAMME →
               </button>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 12: Limited Edition Drops (E-commerce Focus) */}
-      <section className="limited-drops-section section">
-        <div className="container">
-          <div className="drop-header">
-            <div className="drop-info">
-              <span className="drop-badge">LIVE NOW</span>
-              <h2 className="luxury-title-main">The Equinox Collection</h2>
-              <p>Exclusive 1-of-50 signed prints by Anya Chen. Dropping now.</p>
-            </div>
-            <div className="drop-timer">
-              <div className="timer-unit">
-                <span className="time">08</span>
-                <span className="label">HRS</span>
-              </div>
-              <div className="timer-sep">:</div>
-              <div className="timer-unit">
-                <span className="time">42</span>
-                <span className="label">MIN</span>
-              </div>
-              <div className="timer-sep">:</div>
-              <div className="timer-unit">
-                <span className="time">15</span>
-                <span className="label">SEC</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="drops-grid">
-            {[1, 2, 3, 4].map((id) => (
-              <div key={id} className="drop-card">
-                <div className="drop-img">
-                  <img src={`https://images.unsplash.com/photo-${1500000000000 + id * 10000}?auto=format&fit=crop&q=80&w=800`} alt={`Drop ${id}`} 
-                       onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=800" }} />
-                  <div className="drop-overlay">
-                    <button className="add-to-cart">QUICK ADD</button>
-                  </div>
-                </div>
-                <div className="drop-meta">
-                  <h4>Spectral Harmony #{id}</h4>
-                  <div className="price-row">
-                    <span className="price">₹14,500</span>
-                    <span className="stock">12 LEFT</span>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>

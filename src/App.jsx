@@ -23,6 +23,7 @@ import Attributes from './admin/pages/Attributes';
 import Orders from './admin/pages/Orders';
 import BulkRequests from './admin/pages/BulkRequests';
 import TradeApplications from './admin/pages/TradeApplications';
+import BrandLogosAdmin from './admin/pages/BrandLogosAdmin';
 import PricingSimulator from './admin/pages/PricingSimulator';
 import CaseStudies from './admin/pages/CaseStudies';
 import RentalProducts from './admin/pages/RentalProducts';
@@ -131,6 +132,7 @@ function App() {
           <Route path="orders" element={<Orders />} />
           <Route path="bulk-requests" element={<BulkRequests />} />
           <Route path="trade-applications" element={<TradeApplications />} />
+          <Route path="brand-logos" element={<BrandLogosAdmin />} />
           <Route path="pricing-simulator" element={<PricingSimulator />} />
           <Route path="case-studies" element={<CaseStudies />} />
           <Route path="artists" element={<Artists />} />

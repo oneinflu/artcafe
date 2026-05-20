@@ -20,6 +20,7 @@ const AdminSidebar = () => {
     { name: 'Active Rentals', path: '/admin/active-rentals', icon: '🔄' },
     { name: 'Bulk Requests', path: '/admin/bulk-requests', icon: '📋' },
     { name: 'Trade Program', path: '/admin/trade-applications', icon: '🏛️' },
+    { name: 'Brand Logos', path: '/admin/brand-logos', icon: '🏢' },
     { name: 'Pricing Sim', path: '/admin/pricing-simulator', icon: '🧮' },
   ];
 
