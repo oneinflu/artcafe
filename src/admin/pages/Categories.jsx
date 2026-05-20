@@ -10,6 +10,7 @@ const Categories = () => {
   
   const [activeTab, setActiveTab] = useState(initialTab); // 'product' or 'blog'
   const [categories, setCategories] = useState([]);
+  const [selectedRootId, setSelectedRootId] = useState('all');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editCategory, setEditCategory] = useState(null);
@@ -29,6 +30,7 @@ const Categories = () => {
   }, [location.search]);
 
   useEffect(() => {
+    setSelectedRootId('all');
     fetchCategories();
   }, [activeTab]);
 
@@ -112,6 +114,14 @@ const Categories = () => {
     setShowModal(true);
   };
 
+  const rootCategories = categories.filter(c => !c.parentCategory);
+
+  const filteredCategories = categories.filter(c => {
+    if (selectedRootId === 'all') return true;
+    const parentId = c.parentCategory?._id || c.parentCategory;
+    return c._id === selectedRootId || parentId === selectedRootId;
+  });
+
   return (
     <div className="admin-page categories">
       <div className="page-header">
@@ -158,6 +168,74 @@ const Categories = () => {
         </div>
       </div>
 
+      {/* Root Categories Filter Pills */}
+      {!loading && categories.length > 0 && (
+        <div className="root-categories-filter" style={{ 
+          display: 'flex', 
+          flexDirection: 'row',
+          flexWrap: 'nowrap',
+          gap: '10px', 
+          overflowX: 'auto', 
+          width: '100%',
+          maxWidth: '100%',
+          padding: '10px 5px 15px', 
+          marginBottom: '20px', 
+          whiteSpace: 'nowrap',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'auto',
+          borderBottom: '1px solid #eee'
+        }}>
+          <button 
+            className={`admin-pill ${selectedRootId === 'all' ? 'active' : ''}`}
+            onClick={() => setSelectedRootId('all')}
+            style={{
+              padding: '8px 18px',
+              borderRadius: '20px',
+              border: '1px solid #ddd',
+              background: selectedRootId === 'all' ? '#ff6b00' : '#fff',
+              color: selectedRootId === 'all' ? '#fff' : '#666',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+              transition: 'all 0.2s',
+              flexShrink: 0
+            }}
+          >
+            All Categories ({categories.length})
+          </button>
+          {rootCategories.map(rc => {
+            const childrenCount = categories.filter(c => {
+              const pId = c.parentCategory?._id || c.parentCategory;
+              return c._id === rc._id || pId === rc._id;
+            }).length;
+
+            return (
+              <button 
+                key={rc._id}
+                className={`admin-pill ${selectedRootId === rc._id ? 'active' : ''}`}
+                onClick={() => setSelectedRootId(rc._id)}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '20px',
+                  border: '1px solid #ddd',
+                  background: selectedRootId === rc._id ? '#ff6b00' : '#fff',
+                  color: selectedRootId === rc._id ? '#fff' : '#666',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                  transition: 'all 0.2s',
+                  flexShrink: 0
+                }}
+              >
+                {rc.name} ({childrenCount})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {loading ? <p>Loading...</p> : (
         <div className="admin-table-wrapper">
           <table className="admin-table">
@@ -170,7 +248,7 @@ const Categories = () => {
               </tr>
             </thead>
             <tbody>
-              {categories.map(c => (
+              {filteredCategories.map(c => (
                 <tr key={c._id}>
                   <td style={{ width: '80px', fontWeight: 800, color: '#ff6b00' }}>#{c.displayOrder || 0}</td>
                   <td>
@@ -205,7 +283,7 @@ const Categories = () => {
                   </td>
                 </tr>
               ))}
-              {categories.length === 0 && (
+              {filteredCategories.length === 0 && (
                 <tr>
                   <td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
                     No {activeTab} categories found.

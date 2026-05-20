@@ -43,7 +43,7 @@ const AdminLayout = () => {
             </button>
           </div>
         </header>
-        <div className="admin-page-content">
+        <div className="admin-page-content" style={{ maxWidth: '100%', overflow: 'hidden' }}>
           <Outlet />
         </div>
       </main>
