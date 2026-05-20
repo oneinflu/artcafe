@@ -23,6 +23,7 @@ const Inventory = () => {
     basePrice: '',
     compareAtPrice: '',
     category: '',
+    subCategory: '',
     space: '',
     style: '',
     discoverCollection: '',
@@ -164,6 +165,7 @@ const Inventory = () => {
       basePrice: p.basePrice || '',
       compareAtPrice: p.compareAtPrice || '',
       category: p.category?._id || p.category || '',
+      subCategory: p.subCategory?._id || p.subCategory || '',
       space: p.space?._id || p.space || '',
       style: p.style?._id || p.style || '',
       discoverCollection: p.discoverCollection?._id || p.discoverCollection || '',
@@ -191,6 +193,7 @@ const Inventory = () => {
       basePrice: '',
       compareAtPrice: '',
       category: '',
+      subCategory: '',
       space: '',
       style: '',
       discoverCollection: '',
@@ -300,6 +303,7 @@ const Inventory = () => {
                   <td>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <span className="status-pill delivered">{p.category?.name || 'Uncategorized'}</span>
+                      {p.subCategory?.name && <span className="status-pill delivered" style={{ fontSize: '0.7rem', opacity: 0.8 }}>Sub: {p.subCategory.name}</span>}
                       {p.space?.name && <span className="status-pill processing" style={{ fontSize: '0.7rem' }}>Space: {p.space.name}</span>}
                       {p.style?.name && <span className="status-pill shipped" style={{ fontSize: '0.7rem' }}>Style: {p.style.name}</span>}
                     </div>
@@ -448,13 +452,32 @@ const Inventory = () => {
 
               {/* RIGHT COLUMN */}
               <div className="form-sidebar">
-                <div className="form-group">
-                  <label>Category</label>
-                  <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} required>
-                    <option value="">Select Category</option>
-                    {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                  </select>
-                </div>
+                 <div className="form-group">
+                   <label>Category</label>
+                   <select 
+                     value={formData.category} 
+                     onChange={e => setFormData({ ...formData, category: e.target.value, subCategory: '' })} 
+                     required
+                   >
+                     <option value="">Select Category</option>
+                     {categories.filter(c => !c.parentCategory).map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                   </select>
+                 </div>
+
+                 <div className="form-group">
+                   <label>Sub Category</label>
+                   <select 
+                     value={formData.subCategory} 
+                     onChange={e => setFormData({ ...formData, subCategory: e.target.value })}
+                     disabled={!formData.category}
+                   >
+                     <option value="">Select Sub Category (Optional)</option>
+                     {categories
+                       .filter(c => c.parentCategory && (c.parentCategory._id === formData.category || c.parentCategory === formData.category))
+                       .map(c => <option key={c._id} value={c._id}>{c.name}</option>)
+                     }
+                   </select>
+                 </div>
 
                 <div className="form-group">
                   <label>Space</label>

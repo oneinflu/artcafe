@@ -12,6 +12,7 @@ exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find({ isExclusive: { $ne: true } })
       .populate('category')
+      .populate('subCategory')
       .populate('attributes.group')
       .populate('artist')
       .populate('space')
@@ -28,6 +29,7 @@ exports.getExclusiveProducts = async (req, res) => {
   try {
     const products = await Product.find({ isExclusive: true })
       .populate('category')
+      .populate('subCategory')
       .populate('attributes.group')
       .populate('artist')
       .populate('space')
@@ -55,6 +57,7 @@ exports.createProduct = async (req, res) => {
     let product = await newProduct.save();
     product = await Product.findById(product._id)
       .populate('category')
+      .populate('subCategory')
       .populate('attributes.group')
       .populate('artist')
       .populate('space')
@@ -95,6 +98,7 @@ exports.updateProduct = async (req, res) => {
     if (typeof data.attributes === 'string') data.attributes = JSON.parse(data.attributes);
     const product = await Product.findByIdAndUpdate(req.params.id, data, { new: true })
       .populate('category')
+      .populate('subCategory')
       .populate('attributes.group')
       .populate('artist')
       .populate('space')
@@ -145,24 +149,43 @@ exports.bulkUploadProducts = async (req, res) => {
           
           if (!name || !basePrice) continue;
 
-          // Find or Create Category
+          // Find or Create Category & Subcategory
           const subCatName = row.subcategory || row.sub_category;
           const catName = row.category;
 
           let catDoc = null;
-          if (subCatName?.trim()) {
-            catDoc = await Category.findOne({ name: { $regex: new RegExp(`^${subCatName.trim()}$`, 'i') } });
+          let subCatDoc = null;
+
+          if (catName?.trim()) {
+            catDoc = await Category.findOne({ name: { $regex: new RegExp(`^${catName.trim()}$`, 'i') }, parentCategory: null });
             if (!catDoc) {
-              catDoc = new Category({ name: subCatName.trim() });
+              catDoc = new Category({ name: catName.trim(), parentCategory: null });
               await catDoc.save();
-              console.log(`Bulk Upload: Created new Category "${subCatName.trim()}"`);
+              console.log(`Bulk Upload: Created new Parent Category "${catName.trim()}"`);
             }
-          } else if (catName?.trim()) {
-            catDoc = await Category.findOne({ name: { $regex: new RegExp(`^${catName.trim()}$`, 'i') } });
-            if (!catDoc) {
-              catDoc = new Category({ name: catName.trim() });
-              await catDoc.save();
-              console.log(`Bulk Upload: Created new Category "${catName.trim()}"`);
+          }
+
+          if (subCatName?.trim()) {
+            subCatDoc = await Category.findOne({ 
+              name: { $regex: new RegExp(`^${subCatName.trim()}$`, 'i') },
+              parentCategory: catDoc ? catDoc._id : { $ne: null }
+            });
+            if (!subCatDoc) {
+              subCatDoc = new Category({ 
+                name: subCatName.trim(), 
+                parentCategory: catDoc ? catDoc._id : null
+              });
+              await subCatDoc.save();
+              console.log(`Bulk Upload: Created new Sub Category "${subCatName.trim()}" under Parent "${catDoc ? catDoc.name : 'None'}"`);
+            }
+          }
+
+          if (!catDoc && subCatDoc) {
+            if (subCatDoc.parentCategory) {
+              catDoc = await Category.findById(subCatDoc.parentCategory);
+            } else {
+              catDoc = subCatDoc;
+              subCatDoc = null;
             }
           }
           
@@ -256,6 +279,7 @@ exports.bulkUploadProducts = async (req, res) => {
             sku: sku || undefined,
             inventory: parseInt(row.inventory || row.stock || 0),
             category: catDoc._id,
+            subCategory: subCatDoc?._id || null,
             space: spaceDoc?._id,
             style: styleDoc?._id,
             discoverCollection: collectionDoc?._id,

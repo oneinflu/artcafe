@@ -13,6 +13,7 @@ const Categories = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editCategory, setEditCategory] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
   const [formData, setFormData] = useState({ 
     name: '', 
     description: '', 
@@ -48,10 +49,22 @@ const Categories = () => {
     const endpoint = editCategory ? `/categories/${editCategory._id}` : '/categories';
     const method = editCategory ? 'PUT' : 'POST';
 
+    const fd = new FormData();
+    fd.append('name', formData.name);
+    fd.append('description', formData.description || '');
+    fd.append('parentCategory', formData.parentCategory || '');
+    fd.append('displayOrder', formData.displayOrder);
+    fd.append('type', formData.type);
+    if (imageFile) {
+      fd.append('image', imageFile);
+    } else {
+      fd.append('image', formData.image || '');
+    }
+
     try {
       await apiFetch(endpoint, {
         method,
-        body: JSON.stringify(formData),
+        body: fd,
       });
       setShowModal(false);
       fetchCategories();
@@ -73,6 +86,7 @@ const Categories = () => {
 
   const openEdit = (c) => {
     setEditCategory(c);
+    setImageFile(null);
     setFormData({
       name: c.name || '',
       description: c.description || '',
@@ -86,6 +100,7 @@ const Categories = () => {
 
   const openAdd = () => {
     setEditCategory(null);
+    setImageFile(null);
     setFormData({ 
       name: '', 
       description: '', 
@@ -159,8 +174,21 @@ const Categories = () => {
                 <tr key={c._id}>
                   <td style={{ width: '80px', fontWeight: 800, color: '#ff6b00' }}>#{c.displayOrder || 0}</td>
                   <td>
-                    <div style={{ fontWeight: 800 }}>{c.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#999' }}>{c.description?.substring(0, 50)}{c.description?.length > 50 ? '...' : ''}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {c.image ? (
+                        <img 
+                          src={c.image.startsWith('http') ? c.image : `http://localhost:5005/${c.image}`} 
+                          alt="" 
+                          style={{ width: '40px', height: '40px', borderRadius: '5px', objectFit: 'cover' }} 
+                        />
+                      ) : (
+                        <div style={{ width: '40px', height: '40px', borderRadius: '5px', background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: '#999' }}>No Img</div>
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 800 }}>{c.name}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#999' }}>{c.description?.substring(0, 50)}{c.description?.length > 50 ? '...' : ''}</div>
+                      </div>
+                    </div>
                   </td>
                   <td>
                     {c.parentCategory ? (
@@ -249,8 +277,23 @@ const Categories = () => {
               </div>
 
               <div className="form-group">
-                <label>Category Image URL</label>
-                <input type="text" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} placeholder="https://..." />
+                <label>Category Image</label>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={e => setImageFile(e.target.files[0])}
+                  style={{ display: 'block', width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                />
+                {formData.image && !imageFile && (
+                  <div style={{ marginTop: '10px' }}>
+                    <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '5px' }}>Current Image:</p>
+                    <img 
+                      src={formData.image.startsWith('http') ? formData.image : `http://localhost:5005/${formData.image}`} 
+                      alt="Category" 
+                      style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '5px', objectFit: 'cover', border: '1px solid #eee' }} 
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="modal-actions">
