@@ -41,6 +41,9 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [spaces, setSpaces] = useState([]);
+  const [styles, setStyles] = useState([]);
+  const [caseStudies, setCaseStudies] = useState([]);
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -74,12 +77,18 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [prodData, catData] = await Promise.all([
+        const [prodData, catData, spaceData, styleData, caseStudyData] = await Promise.all([
           apiFetch('/products').catch(() => []),
-          apiFetch('/categories').catch(() => [])
+          apiFetch('/categories').catch(() => []),
+          apiFetch('/spaces').catch(() => []),
+          apiFetch('/styles').catch(() => []),
+          apiFetch('/case-studies').catch(() => [])
         ]);
         setProducts(prodData);
         setCategories(catData);
+        setSpaces(spaceData);
+        setStyles(styleData);
+        setCaseStudies(caseStudyData);
       } catch (err) {
         console.error("Initialization Error:", err);
       } finally {
@@ -123,6 +132,8 @@ function App() {
           <div className="app-wrapper">
             <Header 
               categories={categories} 
+              spaces={spaces}
+              styles={styles}
               cartCount={cart.length} 
               openCart={() => setIsCartOpen(true)}
               openAuth={() => setIsAuthOpen(true)}
@@ -139,7 +150,7 @@ function App() {
             
             <main className="main-content" style={{ paddingTop: isScrolled ? '70px' : '90px' }}>
               <Routes>
-                <Route path="/" element={<HomePage products={products} categories={categories} />} />
+                <Route path="/" element={<HomePage products={products} categories={categories} caseStudies={caseStudies} />} />
                 <Route path="/shop" element={<ShopPage />} />
                 <Route path="/product/:slug" element={<ProductDetailPage />} />
                 <Route path="/cart" element={<CartPage cart={cart} />} />

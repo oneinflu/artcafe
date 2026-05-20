@@ -19,7 +19,8 @@ const CaseStudies = () => {
     category: '',
     client: '',
     isPublished: false,
-    featuredImage: null
+    featuredImage: null,
+    tags: ''
   });
 
   const [imagePreview, setImagePreview] = useState(null);
@@ -59,7 +60,8 @@ const CaseStudies = () => {
       category: study.category?._id || study.category || '',
       client: study.client || '',
       isPublished: study.isPublished || false,
-      featuredImage: null
+      featuredImage: null,
+      tags: study.tags ? study.tags.join(', ') : ''
     });
     setImagePreview(resolveImageUrl(study.featuredImage));
     setView('editor');
@@ -75,7 +77,8 @@ const CaseStudies = () => {
       category: '',
       client: '',
       isPublished: false,
-      featuredImage: null
+      featuredImage: null,
+      tags: ''
     });
     setImagePreview(null);
     setView('editor');
@@ -217,13 +220,23 @@ const CaseStudies = () => {
                 </div>
               </div>
 
-              <div className="form-group">
+               <div className="form-group">
                 <label>Excerpt</label>
                 <textarea 
                   value={formData.description} 
                   onChange={e => setFormData({ ...formData, description: e.target.value })} 
                   rows="3"
                 ></textarea>
+              </div>
+
+              <div className="form-group">
+                <label>Tags (comma-separated)</label>
+                <input 
+                  type="text" 
+                  value={formData.tags} 
+                  onChange={e => setFormData({ ...formData, tags: e.target.value })} 
+                  placeholder="New Acquisition, Summer 2026, Gold Leaf" 
+                />
               </div>
 
               <div className="form-group">

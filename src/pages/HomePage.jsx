@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { resolveImageUrl, slugify } from '../utils/helpers';
 
-const HomePage = ({ products, categories }) => {
+const HomePage = ({ products, categories, caseStudies = [] }) => {
   const [sliderPos, setSliderPos] = useState(50);
   const dummyProducts = [
     { _id: 'd1', name: 'Golden Abstract I', basePrice: 12500, images: ['https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800'] },
@@ -18,42 +18,43 @@ const HomePage = ({ products, categories }) => {
   const bestSellersProducts = actualProducts.filter(p => p.isFeatured || p._id.startsWith('d')).slice(0, 4);
   const [activeSlide, setActiveSlide] = useState(0);
 
-  const caseStudies = [
+  const defaultCaseStudies = [
     {
-      id: 1,
+      _id: 'c1',
       title: "Every great piece has a story worth owning",
-      subtitle: "Pichwai on Cloth, c. 1820",
       description: "A living gallery of fine Indian art, antiquities, and collectibles — where each piece comes with its provenance, its history, and a reason to belong in your world.",
-      image: "https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?auto=format&fit=crop&q=80&w=2000",
-      tag: "New Acquisition — Summer 2026",
-      meta: "Nathdwara · Lord Krishna with Gopis · 48 × 72 inches",
+      featuredImage: "https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?auto=format&fit=crop&q=80&w=2000",
+      client: "ArtCafe Archives, Hyderabad",
+      tags: ["New Acquisition — Summer 2026", "Nathdwara · Lord Krishna with Gopis", "48 × 72 inches"],
       primaryBtn: "Browse Collection",
       secondaryBtn: "Art on Rent"
     },
     {
-      id: 2,
-      title: "The Monolith Hotel",
-      subtitle: "OLD MONEY AESTHETIC",
+      _id: 'c2',
+      title: "The Monolith Hotel Lobby",
       description: "Elevating the grand lobby with a series of monochrome architectural studies in museum-grade charcoal frames.",
-      image: "https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=2000",
-      tag: "Hospitality"
+      featuredImage: "https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=2000",
+      client: "The Monolith Hotel",
+      tags: ["Hospitality", "Old Money Aesthetic", "Black & White"]
     },
     {
-      id: 3,
-      title: "The Sacred Sanctuary",
-      subtitle: "SPIRITUAL LUXURY",
+      _id: 'c3',
+      title: "The Sacred Sanctuary Villa",
       description: "Intricate gold-leafed mandalas designed to create a sense of profound peace in a private meditation retreat.",
-      image: "https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=2000",
-      tag: "Spiritual"
+      featuredImage: "https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=2000",
+      client: "Private Client, Jaipur",
+      tags: ["Residential", "Spiritual Luxury", "Gold Leaf"]
     }
   ];
 
+  const actualCaseStudies = caseStudies && caseStudies.length > 0 ? caseStudies : defaultCaseStudies;
+
   useEffect(() => {
     const timer = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % caseStudies.length);
+      setActiveSlide((prev) => (prev + 1) % actualCaseStudies.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, [caseStudies.length]);
+  }, [actualCaseStudies.length]);
 
   const [isAIExpanded, setIsAIExpanded] = useState(false);
 
@@ -88,40 +89,64 @@ const HomePage = ({ products, categories }) => {
       </div>
       {/* SECTION 1: New Age Editorial Hero Slider */}
       <section className="hero-editorial dark-texture-overlay">
-        {caseStudies.map((slide, index) => (
-          <div
-            key={slide.id}
-            className={`editorial-slide ${index === activeSlide ? 'active' : ''}`}
-          >
-            <div className="editorial-container container">
-              <div className="editorial-text-side">
-                <div className="editorial-header">
-                  <span className="editorial-tag">{slide.tag}</span>
-                  <div className="editorial-title-wrapper">
-                    <h1 className="editorial-title-main">Every great piece <br />has a <span>story <br />worth owning</span></h1>
-                    <div className="editorial-title-vertical">{slide.subtitle}</div>
-                  </div>
-                  <div className="editorial-meta-line">{slide.meta}</div>
-                </div>
-                <p className="editorial-description">{slide.description}</p>
-                <div className="editorial-actions">
-                  <Link to="/shop" className="editorial-btn">{slide.primaryBtn || 'EXPLORE'}</Link>
-                  <Link to="/rent" className="editorial-btn secondary">{slide.secondaryBtn || 'LEARN MORE'}</Link>
-                </div>
-              </div>
+        {/* Dynamic ambient blur background */}
+        {actualCaseStudies[activeSlide] && (
+          <div 
+            className="ambient-blur-backdrop" 
+            style={{ 
+              backgroundImage: `url(${resolveImageUrl(actualCaseStudies[activeSlide].featuredImage || actualCaseStudies[activeSlide].image, actualCaseStudies[activeSlide]._id || actualCaseStudies[activeSlide].id)})` 
+            }}
+          />
+        )}
 
-              <div className="editorial-image-side">
-                <div className="editorial-image-frame">
-                  <img src={slide.image} alt={slide.title} />
-                  <div className="image-float-badge">CURATED SELECTION</div>
+        {actualCaseStudies.map((slide, index) => {
+          const slideId = slide._id || slide.id;
+          const slideTitle = slide.title;
+          const slideDescription = slide.description;
+          const slideImage = resolveImageUrl(slide.featuredImage || slide.image, slideId);
+          const slideTag = slide.tags?.[0] || slide.tag || "CASE STUDY";
+          const slideSubtitle = slide.tags?.[1] || slide.subtitle || "";
+          const slideMeta = slide.tags?.[2] || slide.meta || slide.client || "";
+
+          return (
+            <div
+              key={slideId}
+              className={`editorial-slide ${index === activeSlide ? 'active' : ''}`}
+            >
+              <div className="editorial-container container">
+                <div className="editorial-text-side">
+                  <div className="slide-counter">
+                    <span>0{index + 1}</span> / 0{actualCaseStudies.length}
+                  </div>
+                  <div className="editorial-header">
+                    <span className="editorial-tag">{slideTag}</span>
+                    <div className="editorial-title-wrapper">
+                      <h1 className="editorial-title-main">
+                        {slideTitle}
+                      </h1>
+                    </div>
+                    {slideMeta && <div className="editorial-meta-line">{slideMeta}</div>}
+                  </div>
+                  <p className="editorial-description">{slideDescription}</p>
+                  <div className="editorial-actions">
+                    <Link to="/shop" className="editorial-btn">{slide.primaryBtn || 'EXPLORE COLLECTION'}</Link>
+                    <Link to="/shop" className="editorial-btn secondary">{slide.secondaryBtn || 'VIEW SPACE'}</Link>
+                  </div>
+                </div>
+
+                <div className="editorial-image-side">
+                  <div className="editorial-image-frame">
+                    <img src={slideImage} alt={slideTitle} />
+                    <div className="image-float-badge">{slideSubtitle || 'CURATED SELECTION'}</div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         <div className="editorial-pagination">
-          {caseStudies.map((_, idx) => (
+          {actualCaseStudies.map((_, idx) => (
             <button
               key={idx}
               className={`pagination-dot ${idx === activeSlide ? 'active' : ''}`}

@@ -32,6 +32,10 @@ exports.createCaseStudy = async (req, res) => {
       data.slug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     }
 
+    if (data.tags && typeof data.tags === 'string') {
+      data.tags = data.tags.split(',').map(t => t.trim()).filter(Boolean);
+    }
+
     const newStudy = new CaseStudy(data);
     await newStudy.save();
     res.json(newStudy);
@@ -46,6 +50,10 @@ exports.updateCaseStudy = async (req, res) => {
     const data = { ...req.body };
     if (req.file) {
       data.featuredImage = req.file.path;
+    }
+
+    if (data.tags && typeof data.tags === 'string') {
+      data.tags = data.tags.split(',').map(t => t.trim()).filter(Boolean);
     }
     
     const study = await CaseStudy.findByIdAndUpdate(req.params.id, data, { new: true });
