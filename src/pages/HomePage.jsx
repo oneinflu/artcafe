@@ -30,6 +30,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
   const [selectedMood, setSelectedMood] = useState(null); // null = All Moods
   const [selectedCaseStudy, setSelectedCaseStudy] = useState(null);
   const [isAdvisoryModalOpen, setIsAdvisoryModalOpen] = useState(false);
+  const [advisorySubmitSuccess, setAdvisorySubmitSuccess] = useState(false);
   const [advisoryForm, setAdvisoryForm] = useState({
     name: '',
     email: '',
@@ -49,7 +50,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
         method: 'POST',
         body: JSON.stringify(advisoryForm)
       });
-      alert('Your Advisory request has been submitted successfully! An art advisor will reach out to you within 24 hours.');
+      setAdvisorySubmitSuccess(true);
       setAdvisoryForm({
         name: '',
         email: '',
@@ -59,7 +60,10 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
         spaceType: '',
         brief: ''
       });
-      setIsAdvisoryModalOpen(false);
+      setTimeout(() => {
+        setIsAdvisoryModalOpen(false);
+        setAdvisorySubmitSuccess(false);
+      }, 2500);
     } catch (err) {
       alert('Submission failed: ' + err.message);
     } finally {
@@ -1116,84 +1120,58 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
       {/* ADVISORY BRIEF SUBMISSION MODAL */}
       {isAdvisoryModalOpen && (
         <div className="luxury-modal-overlay" onClick={() => setIsAdvisoryModalOpen(false)}>
-          <div className="luxury-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '550px' }}>
-            <button className="close-modal-btn" onClick={() => setIsAdvisoryModalOpen(false)}>×</button>
-            <div style={{ padding: '40px', background: '#111', color: '#fff' }}>
-              <span style={{ 
-                color: '#b3956b', 
-                fontSize: '0.75rem', 
-                letterSpacing: '3px', 
-                textTransform: 'uppercase', 
-                display: 'block', 
-                marginBottom: '10px',
-                fontWeight: 600
-              }}>
-                Art Advisory Programme
-              </span>
-              <h2 style={{ 
-                fontFamily: 'serif', 
-                fontSize: '2rem', 
-                fontWeight: '400', 
-                marginBottom: '15px', 
-                color: '#fff',
-                borderBottom: '1px solid rgba(255,255,255,0.1)',
-                paddingBottom: '15px'
-              }}>
-                Submit Your Brief
-              </h2>
-              <p style={{ 
-                fontSize: '0.85rem', 
-                color: '#aaa', 
-                marginBottom: '30px', 
-                lineHeight: '1.6' 
-              }}>
-                Tell us about your space. An ArtCafe advisor will analyze your requirements and compile a bespoke catalog of recommended works within 24 hours.
-              </p>
+          <div className="luxury-modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={() => setIsAdvisoryModalOpen(false)}>&times;</button>
+            
+            {advisorySubmitSuccess ? (
+              <div className="modal-success-state">
+                <div className="success-checkmark">&#10003;</div>
+                <h3>Brief Submitted Successfully</h3>
+                <p>Thank you for your request. An art advisor will review your requirements and reach out to you within 24 hours.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleAdvisorySubmit} className="trade-application-form">
+                <h2>Speak to an Art Advisor</h2>
+                <p className="form-subtitle">Tell us about your space. We'll curate a bespoke catalog tailored to your brief, free of charge.</p>
 
-              <form onSubmit={handleAdvisorySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                  <div className="modal-input-field">
-                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Your Name *</label>
-                    <input 
-                      type="text" 
-                      required 
-                      value={advisoryForm.name} 
-                      onChange={e => setAdvisoryForm({ ...advisoryForm, name: e.target.value })}
-                      style={{ width: '100%', padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
-                    />
-                  </div>
-                  <div className="modal-input-field">
-                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Phone Number *</label>
-                    <input 
-                      type="tel" 
-                      required 
-                      value={advisoryForm.phone} 
-                      onChange={e => setAdvisoryForm({ ...advisoryForm, phone: e.target.value })}
-                      style={{ width: '100%', padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
-                    />
-                  </div>
-                </div>
-
-                <div className="modal-input-field">
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Email Address *</label>
+                <div className="form-group-luxury">
                   <input 
-                    type="email" 
+                    type="text" 
                     required 
-                    value={advisoryForm.email} 
-                    onChange={e => setAdvisoryForm({ ...advisoryForm, email: e.target.value })}
-                    style={{ width: '100%', padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
+                    placeholder="Full Name"
+                    value={advisoryForm.name} 
+                    onChange={e => setAdvisoryForm({ ...advisoryForm, name: e.target.value })}
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                  <div className="modal-input-field">
-                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Space Type</label>
+                <div className="form-group-luxury">
+                  <input 
+                    type="email" 
+                    required 
+                    placeholder="Email Address"
+                    value={advisoryForm.email} 
+                    onChange={e => setAdvisoryForm({ ...advisoryForm, email: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group-luxury">
+                  <input 
+                    type="tel" 
+                    required 
+                    placeholder="Phone Number"
+                    value={advisoryForm.phone} 
+                    onChange={e => setAdvisoryForm({ ...advisoryForm, phone: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                  <div className="form-group-luxury" style={{ marginBottom: 0 }}>
                     <select 
                       value={advisoryForm.spaceType} 
                       onChange={e => setAdvisoryForm({ ...advisoryForm, spaceType: e.target.value })}
-                      style={{ width: '100%', padding: '10px', background: '#222', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
+                      style={{ width: '100%', background: '#111', color: '#fff', border: '1px solid #333', padding: '12px' }}
                     >
-                      <option value="">Select Space...</option>
+                      <option value="">Select Space Type...</option>
                       <option value="Living Room">Living Room</option>
                       <option value="Bedroom">Bedroom</option>
                       <option value="Dining Room">Dining Room</option>
@@ -1202,14 +1180,14 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                       <option value="Full Residence">Full Residence</option>
                     </select>
                   </div>
-                  <div className="modal-input-field">
-                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Preferred Style</label>
+
+                  <div className="form-group-luxury" style={{ marginBottom: 0 }}>
                     <select 
                       value={advisoryForm.preferredStyle} 
                       onChange={e => setAdvisoryForm({ ...advisoryForm, preferredStyle: e.target.value })}
-                      style={{ width: '100%', padding: '10px', background: '#222', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
+                      style={{ width: '100%', background: '#111', color: '#fff', border: '1px solid #333', padding: '12px' }}
                     >
-                      <option value="">Select Style...</option>
+                      <option value="">Select Preferred Style...</option>
                       <option value="Abstract Modern">Abstract Modern</option>
                       <option value="Traditional / Vedic">Traditional / Vedic</option>
                       <option value="Minimalist Contemporary">Minimalist Contemporary</option>
@@ -1219,102 +1197,42 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
-                  <div className="modal-input-field">
-                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Estimated Budget Range</label>
-                    <select 
-                      value={advisoryForm.budgetRange} 
-                      onChange={e => setAdvisoryForm({ ...advisoryForm, budgetRange: e.target.value })}
-                      style={{ width: '100%', padding: '10px', background: '#222', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
-                    >
-                      <option value="">Select Budget...</option>
-                      <option value="Under ₹50,000">Under ₹50,000</option>
-                      <option value="₹50,000 - ₹2,00,000">₹50,000 - ₹2,00,000</option>
-                      <option value="₹2,00,000 - ₹5,00,000">₹2,00,000 - ₹5,00,000</option>
-                      <option value="₹5,00,000+">₹5,00,000+</option>
-                    </select>
-                  </div>
+                <div className="form-group-luxury">
+                  <select 
+                    value={advisoryForm.budgetRange} 
+                    onChange={e => setAdvisoryForm({ ...advisoryForm, budgetRange: e.target.value })}
+                    style={{ width: '100%', background: '#111', color: '#fff', border: '1px solid #333', padding: '12px' }}
+                  >
+                    <option value="">Select Estimated Budget Range...</option>
+                    <option value="Under ₹50,000">Under ₹50,000</option>
+                    <option value="₹50,000 - ₹2,00,000">₹50,000 - ₹2,00,000</option>
+                    <option value="₹2,00,000 - ₹5,00,000">₹2,00,000 - ₹5,00,000</option>
+                    <option value="₹5,00,000+">₹5,00,000+</option>
+                  </select>
                 </div>
 
-                <div className="modal-input-field">
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Your Brief / Requirements *</label>
+                <div className="form-group-luxury">
                   <textarea 
                     rows="3"
                     required
                     placeholder="Describe your dimensions, preferred themes, color palettes, or any custom requirements..."
                     value={advisoryForm.brief} 
                     onChange={e => setAdvisoryForm({ ...advisoryForm, brief: e.target.value })}
-                    style={{ width: '100%', padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', resize: 'vertical' }}
                   />
                 </div>
 
                 <button 
                   type="submit" 
+                  className="submit-trade-btn" 
                   disabled={advisorySubmitting}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    background: '#ff6b00',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px',
-                    marginTop: '10px',
-                    transition: 'background 0.3s ease'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#e05e00'}
-                  onMouseLeave={e => e.currentTarget.style.background = '#ff6b00'}
                 >
-                  {advisorySubmitting ? 'Submitting Brief...' : 'Submit Request'}
+                  {advisorySubmitting ? 'SUBMITTING BRIEF...' : 'SUBMIT BRIEF'}
                 </button>
               </form>
-            </div>
+            )}
           </div>
         </div>
       )}
-
-
-      {/* SECTION 16: As Seen On (Infinite Press Marquee) */}
-      <section className="press-section">
-        <div className="container">
-          <div className="section-header-center">
-            <span className="subtitle">AS SEEN ON</span>
-            <h2>Global Recognition</h2>
-          </div>
-        </div>
-        <div className="press-marquee-container">
-          <div className="press-track">
-            {[
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Vogue_Logo.svg/1280px-Vogue_Logo.svg.png",
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Forbes_logo.svg/1280px-Forbes_logo.svg.png",
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/GQ_logo.svg/1280px-GQ_logo.svg.png",
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/The_New_York_Times_logo.svg/1280px-The_New_York_Times_logo.svg.png",
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Architectural_Digest_logo.svg/1280px-Architectural_Digest_logo.svg.png",
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Wallpaper*_logo.svg/1280px-Wallpaper*_logo.svg.png"
-            ].map((logo, idx) => (
-              <div key={idx} className="press-item">
-                <img src={logo} alt="Press Logo" />
-              </div>
-            ))}
-            {/* Duplicate for seamless loop */}
-            {[
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Vogue_Logo.svg/1280px-Vogue_Logo.svg.png",
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Forbes_logo.svg/1280px-Forbes_logo.svg.png",
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/GQ_logo.svg/1280px-GQ_logo.svg.png",
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/The_New_York_Times_logo.svg/1280px-The_New_York_Times_logo.svg.png",
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Architectural_Digest_logo.svg/1280px-Architectural_Digest_logo.svg.png",
-              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Wallpaper*_logo.svg/1280px-Wallpaper*_logo.svg.png"
-            ].map((logo, idx) => (
-              <div key={`dup-${idx}`} className="press-item">
-                <img src={logo} alt="Press Logo" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* SECTION 17: Newsletter Closure (Screenshot 4) */}
       <section className="newsletter-closure-section dark">
