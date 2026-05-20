@@ -42,16 +42,47 @@ exports.getExclusiveProducts = async (req, res) => {
   }
 };
 
+const mongoose = require('mongoose');
+const slugifyHelper = (text) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-');
+};
+
 exports.getProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id)
-      .populate('category')
-      .populate('subCategory')
-      .populate('attributes.group')
-      .populate('artist')
-      .populate('space')
-      .populate('style')
-      .populate('discoverCollection');
+    const idOrSlug = req.params.id;
+    let product = null;
+
+    if (mongoose.Types.ObjectId.isValid(idOrSlug)) {
+      product = await Product.findById(idOrSlug)
+        .populate('category')
+        .populate('subCategory')
+        .populate('attributes.group')
+        .populate('artist')
+        .populate('space')
+        .populate('style')
+        .populate('discoverCollection');
+    }
+
+    if (!product) {
+      // Find by slugified name
+      const allProducts = await Product.find()
+        .populate('category')
+        .populate('subCategory')
+        .populate('attributes.group')
+        .populate('artist')
+        .populate('space')
+        .populate('style')
+        .populate('discoverCollection');
+
+      product = allProducts.find(p => slugifyHelper(p.name) === idOrSlug);
+    }
+
     if (!product) {
       return res.status(404).json({ msg: 'Product not found' });
     }

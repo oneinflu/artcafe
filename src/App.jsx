@@ -25,6 +25,7 @@ import BulkRequests from './admin/pages/BulkRequests';
 import TradeApplications from './admin/pages/TradeApplications';
 import BrandLogosAdmin from './admin/pages/BrandLogosAdmin';
 import AdvisoryRequests from './admin/pages/AdvisoryRequests';
+import NewsletterSubscribers from './admin/pages/NewsletterSubscribers';
 import PricingSimulator from './admin/pages/PricingSimulator';
 import CaseStudies from './admin/pages/CaseStudies';
 import RentalProducts from './admin/pages/RentalProducts';
@@ -135,6 +136,7 @@ function App() {
           <Route path="trade-applications" element={<TradeApplications />} />
           <Route path="brand-logos" element={<BrandLogosAdmin />} />
           <Route path="advisory-requests" element={<AdvisoryRequests />} />
+          <Route path="newsletter-subscribers" element={<NewsletterSubscribers />} />
           <Route path="pricing-simulator" element={<PricingSimulator />} />
           <Route path="case-studies" element={<CaseStudies />} />
           <Route path="artists" element={<Artists />} />

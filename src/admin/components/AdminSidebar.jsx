@@ -22,6 +22,7 @@ const AdminSidebar = () => {
     { name: 'Trade Program', path: '/admin/trade-applications', icon: '🏛️' },
     { name: 'Brand Logos', path: '/admin/brand-logos', icon: '🏢' },
     { name: 'Advisory Req', path: '/admin/advisory-requests', icon: '📞' },
+    { name: 'Newsletter', path: '/admin/newsletter-subscribers', icon: '✉️' },
     { name: 'Pricing Sim', path: '/admin/pricing-simulator', icon: '🧮' },
   ];
 

@@ -42,6 +42,31 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
   });
   const [advisorySubmitting, setAdvisorySubmitting] = useState(false);
 
+  const [newsEmail, setNewsEmail] = useState('');
+  const [newsStatus, setNewsStatus] = useState(null); // 'submitting' | 'success' | 'error'
+  const [newsMessage, setNewsMessage] = useState('');
+
+  const handleNewsSubscribe = async (e) => {
+    e.preventDefault();
+    if (!newsEmail) return;
+
+    setNewsStatus('submitting');
+    setNewsMessage('');
+
+    try {
+      const res = await apiFetch('/newsletter/subscribe', {
+        method: 'POST',
+        body: JSON.stringify({ email: newsEmail })
+      });
+      setNewsStatus('success');
+      setNewsMessage(res.msg || 'Successfully subscribed!');
+      setNewsEmail('');
+    } catch (err) {
+      setNewsStatus('error');
+      setNewsMessage(err.message || 'Something went wrong. Please try again.');
+    }
+  };
+
   const handleAdvisorySubmit = async (e) => {
     e.preventDefault();
     setAdvisorySubmitting(true);
@@ -1240,10 +1265,29 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
             <p>Fortnightly dispatches from the archive — new acquisitions, collector stories, artist features, and the history behind the pieces.</p>
           </div>
           <div className="newsletter-form-zone">
-            <div className="newsletter-input-group">
-              <input type="email" placeholder="Your email address" />
-              <button className="subscribe-btn">SUBSCRIBE</button>
-            </div>
+            <form onSubmit={handleNewsSubscribe} className="newsletter-input-group">
+              <input 
+                type="email" 
+                placeholder="Your email address" 
+                value={newsEmail}
+                onChange={(e) => setNewsEmail(e.target.value)}
+                disabled={newsStatus === 'submitting'}
+                required
+              />
+              <button type="submit" className="subscribe-btn" disabled={newsStatus === 'submitting'}>
+                {newsStatus === 'submitting' ? '...' : 'SUBSCRIBE'}
+              </button>
+            </form>
+            {newsMessage && (
+              <p style={{ 
+                marginTop: '10px', 
+                fontSize: '13px', 
+                color: newsStatus === 'success' ? 'var(--color-gold)' : '#ff6b00',
+                transition: 'all 0.3s'
+              }}>
+                {newsMessage}
+              </p>
+            )}
             <p className="no-spam">No spam. Unsubscribe at any time. Sent every two weeks.</p>
             <ul className="newsletter-benefits">
               <li>First look at new arrivals before they go on the website</li>

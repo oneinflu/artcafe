@@ -38,6 +38,7 @@ app.use('/api/collections', require('./routes/collections'));
 app.use('/api/trade-applications', require('./routes/tradeApplications'));
 app.use('/api/brand-logos', require('./routes/brandLogos'));
 app.use('/api/advisory-requests', require('./routes/advisoryRequests'));
+app.use('/api/newsletter', require('./routes/newsletter'));
 console.log('Routes registered.');
 
 // Serve static assets from the Vite React frontend build folder (one directory level up)
