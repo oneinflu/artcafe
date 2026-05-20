@@ -33,9 +33,17 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('featured');
   const [maxPrice, setMaxPrice] = useState(100000);
-  const [curationTab, setCurationTab] = useState('collections');
 
-    // Filter IDs state
+  // Accordion filters expanded state
+  const [expandedFilters, setExpandedFilters] = useState({
+    price: true,
+    collections: true,
+    categories: true,
+    spaces: false,
+    styles: false
+  });
+
+  // Filter IDs state
   const [selectedCollections, setSelectedCollections] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedSpaces, setSelectedSpaces] = useState([]);
@@ -57,7 +65,7 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
       const match = collections.find(c => slugify(c.name) === colParam);
       if (match) {
         setSelectedCollections([match._id]);
-        setCurationTab('collections');
+        setExpandedFilters(prev => ({ ...prev, collections: true }));
       }
     } else if (!colParam) {
       setSelectedCollections([]);
@@ -67,7 +75,7 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
       const match = spaces.find(s => slugify(s.name) === spaceParam);
       if (match) {
         setSelectedSpaces([match._id]);
-        setCurationTab('spaces');
+        setExpandedFilters(prev => ({ ...prev, spaces: true }));
       }
     } else if (!spaceParam) {
       setSelectedSpaces([]);
@@ -77,7 +85,7 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
       const match = styles.find(s => slugify(s.name) === styleParam);
       if (match) {
         setSelectedStyles([match._id]);
-        setCurationTab('styles');
+        setExpandedFilters(prev => ({ ...prev, styles: true }));
       }
     } else if (!styleParam) {
       setSelectedStyles([]);
@@ -85,11 +93,21 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
 
     if (catParam && categories.length > 0) {
       const match = categories.find(c => slugify(c.name) === catParam);
-      if (match) setSelectedCategories([match._id]);
+      if (match) {
+        setSelectedCategories([match._id]);
+        setExpandedFilters(prev => ({ ...prev, categories: true }));
+      }
     } else if (!catParam) {
       setSelectedCategories([]);
     }
   }, [searchParams, collections, spaces, styles, categories]);
+
+  const toggleExpand = (section) => {
+    setExpandedFilters(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   const toggleFilter = (field, id) => {
     // Clear URL parameters since user is manually interacting with the filter sidebar
@@ -107,6 +125,19 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
     }
   };
 
+  const removeFilter = (type, id) => {
+    const idStr = id.toString();
+    if (type === 'collection') {
+      setSelectedCollections(prev => prev.filter(x => x.toString() !== idStr));
+    } else if (type === 'category') {
+      setSelectedCategories(prev => prev.filter(x => x.toString() !== idStr));
+    } else if (type === 'space') {
+      setSelectedSpaces(prev => prev.filter(x => x.toString() !== idStr));
+    } else if (type === 'style') {
+      setSelectedStyles(prev => prev.filter(x => x.toString() !== idStr));
+    }
+  };
+
   const resetAllFilters = () => {
     setSearchParams({});
     setSelectedCollections([]);
@@ -115,6 +146,25 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
     setSelectedStyles([]);
     setMaxPrice(100000);
   };
+
+  // Construct active filters list for display pills
+  const activeFiltersList = [];
+  selectedCollections.forEach(id => {
+    const match = collections.find(c => c._id.toString() === id.toString());
+    if (match) activeFiltersList.push({ type: 'collection', id, label: match.name });
+  });
+  selectedCategories.forEach(id => {
+    const match = categories.find(c => c._id.toString() === id.toString());
+    if (match) activeFiltersList.push({ type: 'category', id, label: match.name });
+  });
+  selectedSpaces.forEach(id => {
+    const match = spaces.find(s => s._id.toString() === id.toString());
+    if (match) activeFiltersList.push({ type: 'space', id, label: match.name });
+  });
+  selectedStyles.forEach(id => {
+    const match = styles.find(s => s._id.toString() === id.toString());
+    if (match) activeFiltersList.push({ type: 'style', id, label: match.name });
+  });
 
   // Perform real-time filtering & sorting
   const filteredProducts = products
@@ -202,228 +252,6 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
         </div>
       </section>
 
-      {/* SHOP CURATION TABS SLIDER */}
-      <section className="shop-curation-slider" style={{ paddingBottom: '30px', borderBottom: '1px solid rgba(0,0,0,0.05)', marginBottom: '40px' }}>
-        <div className="container">
-          <div className="curation-tabs" style={{ display: 'flex', gap: '20px', marginBottom: '25px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
-            <button 
-              className={`curation-tab-btn ${curationTab === 'collections' ? 'active' : ''}`}
-              onClick={() => setCurationTab('collections')}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontFamily: 'var(--font-display)',
-                fontSize: '13px',
-                fontWeight: 600,
-                letterSpacing: '0.1em',
-                padding: '8px 0',
-                cursor: 'pointer',
-                color: curationTab === 'collections' ? 'var(--color-gold)' : '#999',
-                borderBottom: curationTab === 'collections' ? '2px solid var(--color-gold)' : '2px solid transparent',
-                transition: 'all 0.3s'
-              }}
-            >
-              COLLECTIONS
-            </button>
-            <button 
-              className={`curation-tab-btn ${curationTab === 'spaces' ? 'active' : ''}`}
-              onClick={() => setCurationTab('spaces')}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontFamily: 'var(--font-display)',
-                fontSize: '13px',
-                fontWeight: 600,
-                letterSpacing: '0.1em',
-                padding: '8px 0',
-                cursor: 'pointer',
-                color: curationTab === 'spaces' ? 'var(--color-gold)' : '#999',
-                borderBottom: curationTab === 'spaces' ? '2px solid var(--color-gold)' : '2px solid transparent',
-                transition: 'all 0.3s'
-              }}
-            >
-              SPACES
-            </button>
-            <button 
-              className={`curation-tab-btn ${curationTab === 'styles' ? 'active' : ''}`}
-              onClick={() => setCurationTab('styles')}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontFamily: 'var(--font-display)',
-                fontSize: '13px',
-                fontWeight: 600,
-                letterSpacing: '0.1em',
-                padding: '8px 0',
-                cursor: 'pointer',
-                color: curationTab === 'styles' ? 'var(--color-gold)' : '#999',
-                borderBottom: curationTab === 'styles' ? '2px solid var(--color-gold)' : '2px solid transparent',
-                transition: 'all 0.3s'
-              }}
-            >
-              STYLES
-            </button>
-          </div>
-
-          <div className="curation-slider-viewport">
-            {curationTab === 'collections' && collections.length > 0 && (
-              <div className="curation-cards-row" style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '15px' }}>
-                {collections.map(c => {
-                  const isSelected = selectedCollections.map(x => x.toString()).includes(c._id.toString());
-                  return (
-                    <div 
-                      key={c._id} 
-                      className={`curation-card ${isSelected ? 'active' : ''}`}
-                      onClick={() => toggleFilter('collection', c._id)}
-                      style={{
-                        flex: '0 0 200px',
-                        height: '120px',
-                        borderRadius: '6px',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        cursor: 'pointer',
-                        border: isSelected ? '2.5px solid var(--color-gold)' : '1px solid rgba(0,0,0,0.1)',
-                        transition: 'transform 0.3s, border-color 0.3s'
-                      }}
-                    >
-                      <div className="card-image-bg" style={{ 
-                        width: '100%', 
-                        height: '100%', 
-                        backgroundImage: `url(${getFilterImage(c.name, 'collection')})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        transition: 'transform 0.5s'
-                      }}></div>
-                      <div className="card-overlay" style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'linear-gradient(to top, rgba(0,0,0,0.7) 10%, rgba(0,0,0,0.1) 80%)'
-                      }}></div>
-                      <div className="card-info" style={{
-                        position: 'absolute',
-                        bottom: '12px',
-                        left: '12px',
-                        color: '#fff',
-                        zIndex: 2
-                      }}>
-                        <span className="card-category" style={{ fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', opacity: 0.8, display: 'block' }}>COLLECTION</span>
-                        <h4 className="card-title" style={{ margin: '2px 0 0 0', fontSize: '13px', fontFamily: 'var(--font-display)', fontWeight: 600 }}>{c.name}</h4>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {curationTab === 'spaces' && spaces.length > 0 && (
-              <div className="curation-cards-row" style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '15px' }}>
-                {spaces.map(s => {
-                  const isSelected = selectedSpaces.map(x => x.toString()).includes(s._id.toString());
-                  return (
-                    <div 
-                      key={s._id} 
-                      className={`curation-card ${isSelected ? 'active' : ''}`}
-                      onClick={() => toggleFilter('space', s._id)}
-                      style={{
-                        flex: '0 0 200px',
-                        height: '120px',
-                        borderRadius: '6px',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        cursor: 'pointer',
-                        border: isSelected ? '2.5px solid var(--color-gold)' : '1px solid rgba(0,0,0,0.1)',
-                        transition: 'transform 0.3s, border-color 0.3s'
-                      }}
-                    >
-                      <div className="card-image-bg" style={{ 
-                        width: '100%', 
-                        height: '100%', 
-                        backgroundImage: `url(${getFilterImage(s.name, 'space')})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        transition: 'transform 0.5s'
-                      }}></div>
-                      <div className="card-overlay" style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'linear-gradient(to top, rgba(0,0,0,0.7) 10%, rgba(0,0,0,0.1) 80%)'
-                      }}></div>
-                      <div className="card-info" style={{
-                        position: 'absolute',
-                        bottom: '12px',
-                        left: '12px',
-                        color: '#fff',
-                        zIndex: 2
-                      }}>
-                        <span className="card-category" style={{ fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', opacity: 0.8, display: 'block' }}>SPACE</span>
-                        <h4 className="card-title" style={{ margin: '2px 0 0 0', fontSize: '13px', fontFamily: 'var(--font-display)', fontWeight: 600 }}>{s.name}</h4>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {curationTab === 'styles' && styles.length > 0 && (
-              <div className="curation-cards-row" style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '15px' }}>
-                {styles.map(s => {
-                  const isSelected = selectedStyles.map(x => x.toString()).includes(s._id.toString());
-                  return (
-                    <div 
-                      key={s._id} 
-                      className={`curation-card ${isSelected ? 'active' : ''}`}
-                      onClick={() => toggleFilter('style', s._id)}
-                      style={{
-                        flex: '0 0 200px',
-                        height: '120px',
-                        borderRadius: '6px',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        cursor: 'pointer',
-                        border: isSelected ? '2.5px solid var(--color-gold)' : '1px solid rgba(0,0,0,0.1)',
-                        transition: 'transform 0.3s, border-color 0.3s'
-                      }}
-                    >
-                      <div className="card-image-bg" style={{ 
-                        width: '100%', 
-                        height: '100%', 
-                        backgroundImage: `url(${getFilterImage(s.name, 'style')})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        transition: 'transform 0.5s'
-                      }}></div>
-                      <div className="card-overlay" style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'linear-gradient(to top, rgba(0,0,0,0.7) 10%, rgba(0,0,0,0.1) 80%)'
-                      }}></div>
-                      <div className="card-info" style={{
-                        position: 'absolute',
-                        bottom: '12px',
-                        left: '12px',
-                        color: '#fff',
-                        zIndex: 2
-                      }}>
-                        <span className="card-category" style={{ fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', opacity: 0.8, display: 'block' }}>STYLE</span>
-                        <h4 className="card-title" style={{ margin: '2px 0 0 0', fontSize: '13px', fontFamily: 'var(--font-display)', fontWeight: 600 }}>{s.name}</h4>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
 
       <div className="container shop-main-container">
         {/* SIDEBAR FILTERS */}
@@ -451,24 +279,37 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
 
           {/* Price Filter */}
           <div className="filter-group-item">
-            <h4 className="filter-heading">Price Range</h4>
-            <div className="price-inputs">
-              <div className="price-box"><span>₹</span><input type="text" value="0" readOnly /></div>
-              <div className="price-box"><span>₹</span><input type="text" value={maxPrice.toLocaleString()} readOnly /></div>
+            <div 
+              className="filter-group-header" 
+              onClick={() => toggleExpand('price')}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+            >
+              <h4 className="filter-heading" style={{ margin: 0 }}>Price Range</h4>
+              <span className="expand-icon" style={{ fontSize: '1.1rem', color: 'var(--color-gold)', fontWeight: 300 }}>
+                {expandedFilters.price ? '−' : '+'}
+              </span>
             </div>
-            <div className="range-slider-wrapper">
-              <input 
-                type="range" 
-                min="500" 
-                max="100000" 
-                step="500"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(parseInt(e.target.value))}
-                className="luxury-range-input"
-              />
-              <div className="range-labels">
-                <span>₹500</span>
-                <span>₹1L+</span>
+            <div className={`filter-options-accordion ${expandedFilters.price ? 'expanded' : ''}`}>
+              <div style={{ paddingTop: '15px' }}>
+                <div className="price-inputs">
+                  <div className="price-box"><span>₹</span><input type="text" value="0" readOnly /></div>
+                  <div className="price-box"><span>₹</span><input type="text" value={maxPrice.toLocaleString()} readOnly /></div>
+                </div>
+                <div className="range-slider-wrapper">
+                  <input 
+                    type="range" 
+                    min="500" 
+                    max="100000" 
+                    step="500"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(parseInt(e.target.value))}
+                    className="luxury-range-input"
+                  />
+                  <div className="range-labels">
+                    <span>₹500</span>
+                    <span>₹1L+</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -476,19 +317,30 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
           {/* Collections Filter */}
           {collections.length > 0 && (
             <div className="filter-group-item">
-              <h4 className="filter-heading">Collections</h4>
-              <div className="filter-options">
-                {collections.map(c => (
-                  <label key={c._id} className="filter-checkbox-wrap">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedCollections.map(x => x.toString()).includes(c._id.toString())}
-                      onChange={() => toggleFilter('collection', c._id)}
-                    />
-                    <span className="checkbox-custom"></span>
-                    <span className="label-text">{c.name}</span>
-                  </label>
-                ))}
+              <div 
+                className="filter-group-header" 
+                onClick={() => toggleExpand('collections')}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+              >
+                <h4 className="filter-heading" style={{ margin: 0 }}>Collections</h4>
+                <span className="expand-icon" style={{ fontSize: '1.1rem', color: 'var(--color-gold)', fontWeight: 300 }}>
+                  {expandedFilters.collections ? '−' : '+'}
+                </span>
+              </div>
+              <div className={`filter-options-accordion ${expandedFilters.collections ? 'expanded' : ''}`}>
+                <div className="filter-options" style={{ paddingTop: '15px' }}>
+                  {collections.map(c => (
+                    <label key={c._id} className="filter-checkbox-wrap">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedCollections.map(x => x.toString()).includes(c._id.toString())}
+                        onChange={() => toggleFilter('collection', c._id)}
+                      />
+                      <span className="checkbox-custom"></span>
+                      <span className="label-text">{c.name}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -496,19 +348,30 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
           {/* Categories Filter */}
           {categories.length > 0 && (
             <div className="filter-group-item">
-              <h4 className="filter-heading">Root Categories</h4>
-              <div className="filter-options">
-                {categories.filter(c => !c.parentCategory).map(c => (
-                  <label key={c._id} className="filter-checkbox-wrap">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedCategories.map(x => x.toString()).includes(c._id.toString())}
-                      onChange={() => toggleFilter('category', c._id)}
-                    />
-                    <span className="checkbox-custom"></span>
-                    <span className="label-text">{c.name}</span>
-                  </label>
-                ))}
+              <div 
+                className="filter-group-header" 
+                onClick={() => toggleExpand('categories')}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+              >
+                <h4 className="filter-heading" style={{ margin: 0 }}>Root Categories</h4>
+                <span className="expand-icon" style={{ fontSize: '1.1rem', color: 'var(--color-gold)', fontWeight: 300 }}>
+                  {expandedFilters.categories ? '−' : '+'}
+                </span>
+              </div>
+              <div className={`filter-options-accordion ${expandedFilters.categories ? 'expanded' : ''}`}>
+                <div className="filter-options" style={{ paddingTop: '15px' }}>
+                  {categories.filter(c => !c.parentCategory).map(c => (
+                    <label key={c._id} className="filter-checkbox-wrap">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedCategories.map(x => x.toString()).includes(c._id.toString())}
+                        onChange={() => toggleFilter('category', c._id)}
+                      />
+                      <span className="checkbox-custom"></span>
+                      <span className="label-text">{c.name}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -516,19 +379,30 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
           {/* Spaces Filter */}
           {spaces.length > 0 && (
             <div className="filter-group-item">
-              <h4 className="filter-heading">Spaces</h4>
-              <div className="filter-options">
-                {spaces.map(s => (
-                  <label key={s._id} className="filter-checkbox-wrap">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedSpaces.map(x => x.toString()).includes(s._id.toString())}
-                      onChange={() => toggleFilter('space', s._id)}
-                    />
-                    <span className="checkbox-custom"></span>
-                    <span className="label-text">{s.name}</span>
-                  </label>
-                ))}
+              <div 
+                className="filter-group-header" 
+                onClick={() => toggleExpand('spaces')}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+              >
+                <h4 className="filter-heading" style={{ margin: 0 }}>Spaces</h4>
+                <span className="expand-icon" style={{ fontSize: '1.1rem', color: 'var(--color-gold)', fontWeight: 300 }}>
+                  {expandedFilters.spaces ? '−' : '+'}
+                </span>
+              </div>
+              <div className={`filter-options-accordion ${expandedFilters.spaces ? 'expanded' : ''}`}>
+                <div className="filter-options" style={{ paddingTop: '15px' }}>
+                  {spaces.map(s => (
+                    <label key={s._id} className="filter-checkbox-wrap">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedSpaces.map(x => x.toString()).includes(s._id.toString())}
+                        onChange={() => toggleFilter('space', s._id)}
+                      />
+                      <span className="checkbox-custom"></span>
+                      <span className="label-text">{s.name}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -536,19 +410,30 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
           {/* Styles Filter */}
           {styles.length > 0 && (
             <div className="filter-group-item">
-              <h4 className="filter-heading">Styles</h4>
-              <div className="filter-options">
-                {styles.map(s => (
-                  <label key={s._id} className="filter-checkbox-wrap">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedStyles.map(x => x.toString()).includes(s._id.toString())}
-                      onChange={() => toggleFilter('style', s._id)}
-                    />
-                    <span className="checkbox-custom"></span>
-                    <span className="label-text">{s.name}</span>
-                  </label>
-                ))}
+              <div 
+                className="filter-group-header" 
+                onClick={() => toggleExpand('styles')}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+              >
+                <h4 className="filter-heading" style={{ margin: 0 }}>Styles</h4>
+                <span className="expand-icon" style={{ fontSize: '1.1rem', color: 'var(--color-gold)', fontWeight: 300 }}>
+                  {expandedFilters.styles ? '−' : '+'}
+                </span>
+              </div>
+              <div className={`filter-options-accordion ${expandedFilters.styles ? 'expanded' : ''}`}>
+                <div className="filter-options" style={{ paddingTop: '15px' }}>
+                  {styles.map(s => (
+                    <label key={s._id} className="filter-checkbox-wrap">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedStyles.map(x => x.toString()).includes(s._id.toString())}
+                        onChange={() => toggleFilter('style', s._id)}
+                      />
+                      <span className="checkbox-custom"></span>
+                      <span className="label-text">{s.name}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -573,6 +458,61 @@ const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], co
               </div>
             </div>
           </div>
+
+          {activeFiltersList.length > 0 && (
+            <div className="active-filters-pills-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '25px', alignItems: 'center', padding: '10px 15px', background: '#fafafa', borderRadius: '4px', border: '1px solid #eaeaea' }}>
+              <span style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Active Curation:</span>
+              {activeFiltersList.map(pill => (
+                <div 
+                  key={`${pill.type}-${pill.id}`} 
+                  onClick={() => removeFilter(pill.type, pill.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    background: '#fff',
+                    border: '1px solid #ddd',
+                    borderRadius: '2px',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    transition: 'all 0.2s',
+                    color: '#222'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = 'var(--color-gold)';
+                    e.currentTarget.style.color = '#ff6b00';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = '#ddd';
+                    e.currentTarget.style.color = '#222';
+                  }}
+                >
+                  <span>{pill.label}</span>
+                  <span style={{ fontSize: '9px', fontWeight: 'bold' }}>✕</span>
+                </div>
+              ))}
+              <button
+                onClick={resetAllFilters}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#ff6b00',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  padding: '4px 8px',
+                  marginLeft: 'auto'
+                }}
+              >
+                Clear All
+              </button>
+            </div>
+          )}
 
           <div className={`product-grid-new-age ${viewMode}`}>
             {filteredProducts.map(p => {
