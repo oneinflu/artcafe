@@ -29,6 +29,43 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
   const [activeSlide, setActiveSlide] = useState(0);
   const [selectedMood, setSelectedMood] = useState(null); // null = All Moods
   const [selectedCaseStudy, setSelectedCaseStudy] = useState(null);
+  const [isAdvisoryModalOpen, setIsAdvisoryModalOpen] = useState(false);
+  const [advisoryForm, setAdvisoryForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    preferredStyle: '',
+    budgetRange: '',
+    spaceType: '',
+    brief: ''
+  });
+  const [advisorySubmitting, setAdvisorySubmitting] = useState(false);
+
+  const handleAdvisorySubmit = async (e) => {
+    e.preventDefault();
+    setAdvisorySubmitting(true);
+    try {
+      await apiFetch('/advisory-requests', {
+        method: 'POST',
+        body: JSON.stringify(advisoryForm)
+      });
+      alert('Your Advisory request has been submitted successfully! An art advisor will reach out to you within 24 hours.');
+      setAdvisoryForm({
+        name: '',
+        email: '',
+        phone: '',
+        preferredStyle: '',
+        budgetRange: '',
+        spaceType: '',
+        brief: ''
+      });
+      setIsAdvisoryModalOpen(false);
+    } catch (err) {
+      alert('Submission failed: ' + err.message);
+    } finally {
+      setAdvisorySubmitting(false);
+    }
+  };
 
   const defaultCaseStudies = [
     {
@@ -1028,33 +1065,6 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
         </div>
       </section>
 
-      {/* SECTION 13: Art After Dark (Events & VIP) */}
-      <section className="art-after-dark-section section dark">
-        <div className="container">
-          <div className="after-dark-layout">
-            <div className="after-dark-content">
-              <span className="subtitle gold">BY INVITATION ONLY</span>
-              <h2>Art After Dark</h2>
-              <p>Join our exclusive moonlit gallery events. Meet the artists, enjoy curated soundscapes, and witness live painting in high-luxury settings.</p>
-              
-              <div className="event-details">
-                <div className="event-item">
-                  <span className="event-label">NEXT EVENT</span>
-                  <h4>Noir & Neon Night</h4>
-                  <p>Mumbai • Dec 15, 2025</p>
-                </div>
-              </div>
-
-              <button className="btn-luxury gold-btn">APPLY FOR VIP ACCESS</button>
-            </div>
-            <div className="after-dark-visual">
-              <img src="https://images.pexels.com/photos/1109354/pexels-photo-1109354.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="VIP Event" />
-              <div className="vip-badge">VIP MEMBERSHIP</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* SECTION 14: Advisory Section (Screenshot 2) */}
       <section className="advisory-section section">
         <div className="container">
@@ -1073,7 +1083,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
             <div className="advisory-step">
               <span className="step-num">01</span>
               <h3>Tell us your brief</h3>
-              <p>Share your space dimensions & budget. Call, WhatsApp or email — your advisor responds within 24 hours with tailored options.</p>
+              <p>Share your space dimensions & brief. Call, WhatsApp or email — your advisor responds within 24 hours with tailored options.</p>
             </div>
             <div className="advisory-step">
               <span className="step-num">02</span>
@@ -1090,12 +1100,181 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
           <div className="advisory-footer">
             <p>Whether you're buying one print or furnishing an entire building — an art advisor is included. Free, always.</p>
             <div className="advisory-cta">
-              <button className="speak-btn">SPEAK TO AN ADVISOR</button>
-              <a href="#" className="learn-more">LEARN ABOUT ADVISORY →</a>
+              <button className="speak-btn" onClick={() => setIsAdvisoryModalOpen(true)}>SPEAK TO AN ADVISOR</button>
+              <button 
+                onClick={() => setIsAdvisoryModalOpen(true)} 
+                className="learn-more"
+                style={{ background: 'none', border: 'none', color: '#ff6b00', cursor: 'pointer', fontWeight: 600 }}
+              >
+                SUBMIT BRIEF OVER ONLINE PORTAL →
+              </button>
             </div>
           </div>
         </div>
       </section>
+
+      {/* ADVISORY BRIEF SUBMISSION MODAL */}
+      {isAdvisoryModalOpen && (
+        <div className="luxury-modal-overlay" onClick={() => setIsAdvisoryModalOpen(false)}>
+          <div className="luxury-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '550px' }}>
+            <button className="close-modal-btn" onClick={() => setIsAdvisoryModalOpen(false)}>×</button>
+            <div style={{ padding: '40px', background: '#111', color: '#fff' }}>
+              <span style={{ 
+                color: '#b3956b', 
+                fontSize: '0.75rem', 
+                letterSpacing: '3px', 
+                textTransform: 'uppercase', 
+                display: 'block', 
+                marginBottom: '10px',
+                fontWeight: 600
+              }}>
+                Art Advisory Programme
+              </span>
+              <h2 style={{ 
+                fontFamily: 'serif', 
+                fontSize: '2rem', 
+                fontWeight: '400', 
+                marginBottom: '15px', 
+                color: '#fff',
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                paddingBottom: '15px'
+              }}>
+                Submit Your Brief
+              </h2>
+              <p style={{ 
+                fontSize: '0.85rem', 
+                color: '#aaa', 
+                marginBottom: '30px', 
+                lineHeight: '1.6' 
+              }}>
+                Tell us about your space. An ArtCafe advisor will analyze your requirements and compile a bespoke catalog of recommended works within 24 hours.
+              </p>
+
+              <form onSubmit={handleAdvisorySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div className="modal-input-field">
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Your Name *</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={advisoryForm.name} 
+                      onChange={e => setAdvisoryForm({ ...advisoryForm, name: e.target.value })}
+                      style={{ width: '100%', padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
+                    />
+                  </div>
+                  <div className="modal-input-field">
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Phone Number *</label>
+                    <input 
+                      type="tel" 
+                      required 
+                      value={advisoryForm.phone} 
+                      onChange={e => setAdvisoryForm({ ...advisoryForm, phone: e.target.value })}
+                      style={{ width: '100%', padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-input-field">
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Email Address *</label>
+                  <input 
+                    type="email" 
+                    required 
+                    value={advisoryForm.email} 
+                    onChange={e => setAdvisoryForm({ ...advisoryForm, email: e.target.value })}
+                    style={{ width: '100%', padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div className="modal-input-field">
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Space Type</label>
+                    <select 
+                      value={advisoryForm.spaceType} 
+                      onChange={e => setAdvisoryForm({ ...advisoryForm, spaceType: e.target.value })}
+                      style={{ width: '100%', padding: '10px', background: '#222', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
+                    >
+                      <option value="">Select Space...</option>
+                      <option value="Living Room">Living Room</option>
+                      <option value="Bedroom">Bedroom</option>
+                      <option value="Dining Room">Dining Room</option>
+                      <option value="Office / Corporate">Office / Corporate</option>
+                      <option value="Hotel / Restaurant">Hotel / Restaurant</option>
+                      <option value="Full Residence">Full Residence</option>
+                    </select>
+                  </div>
+                  <div className="modal-input-field">
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Preferred Style</label>
+                    <select 
+                      value={advisoryForm.preferredStyle} 
+                      onChange={e => setAdvisoryForm({ ...advisoryForm, preferredStyle: e.target.value })}
+                      style={{ width: '100%', padding: '10px', background: '#222', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
+                    >
+                      <option value="">Select Style...</option>
+                      <option value="Abstract Modern">Abstract Modern</option>
+                      <option value="Traditional / Vedic">Traditional / Vedic</option>
+                      <option value="Minimalist Contemporary">Minimalist Contemporary</option>
+                      <option value="Heritage Landscapes">Heritage Landscapes</option>
+                      <option value="Pop Art / Bold">Pop Art / Bold</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
+                  <div className="modal-input-field">
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Estimated Budget Range</label>
+                    <select 
+                      value={advisoryForm.budgetRange} 
+                      onChange={e => setAdvisoryForm({ ...advisoryForm, budgetRange: e.target.value })}
+                      style={{ width: '100%', padding: '10px', background: '#222', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px' }}
+                    >
+                      <option value="">Select Budget...</option>
+                      <option value="Under ₹50,000">Under ₹50,000</option>
+                      <option value="₹50,000 - ₹2,00,000">₹50,000 - ₹2,00,000</option>
+                      <option value="₹2,00,000 - ₹5,00,000">₹2,00,000 - ₹5,00,000</option>
+                      <option value="₹5,00,000+">₹5,00,000+</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="modal-input-field">
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#b3956b', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 600 }}>Your Brief / Requirements *</label>
+                  <textarea 
+                    rows="3"
+                    required
+                    placeholder="Describe your dimensions, preferred themes, color palettes, or any custom requirements..."
+                    value={advisoryForm.brief} 
+                    onChange={e => setAdvisoryForm({ ...advisoryForm, brief: e.target.value })}
+                    style={{ width: '100%', padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', resize: 'vertical' }}
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  disabled={advisorySubmitting}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    background: '#ff6b00',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    marginTop: '10px',
+                    transition: 'background 0.3s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#e05e00'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#ff6b00'}
+                >
+                  {advisorySubmitting ? 'Submitting Brief...' : 'Submit Request'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
 
       {/* SECTION 16: As Seen On (Infinite Press Marquee) */}
