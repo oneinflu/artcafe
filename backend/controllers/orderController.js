@@ -160,3 +160,58 @@ exports.updateRentalStatus = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
+
+exports.createRazorpayOrder = async (req, res) => {
+  try {
+    const { amount } = req.body;
+    if (!amount) {
+      return res.status(400).json({ msg: 'Amount is required' });
+    }
+
+    const receipt = `rcpt_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    if (razorpay) {
+      try {
+        const options = {
+          amount: Math.round(amount * 100), // Razorpay accepts in paise
+          currency: 'INR',
+          receipt: receipt
+        };
+        const rzpOrder = await razorpay.orders.create(options);
+        return res.json({
+          success: true,
+          key: process.env.RAZORPAY_KEY_ID,
+          order: rzpOrder
+        });
+      } catch (rzpErr) {
+        console.warn('Razorpay Live API Order Creation failed, falling back to simulation:', rzpErr.message);
+      }
+    }
+
+    // Mock/Simulated Razorpay Order
+    const mockOrder = {
+      id: `rzp_test_sim_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+      entity: 'order',
+      amount: Math.round(amount * 100),
+      amount_paid: 0,
+      amount_due: Math.round(amount * 100),
+      currency: 'INR',
+      receipt: receipt,
+      status: 'created',
+      attempts: 0,
+      notes: [],
+      created_at: Math.floor(Date.now() / 1000)
+    };
+
+    return res.json({
+      success: true,
+      mocked: true,
+      key: process.env.RAZORPAY_KEY_ID || 'rzp_test_mockkey123456789',
+      order: mockOrder
+    });
+
+  } catch (err) {
+    console.error('Create Razorpay Order Error:', err.message);
+    res.status(500).json({ msg: 'Error creating Razorpay order', error: err.message });
+  }
+};

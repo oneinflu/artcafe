@@ -15,6 +15,9 @@ router.put('/:id', auth('admin'), orderController.updateOrderStatus);
 // @route   POST api/orders
 router.post('/', auth('customer'), orderController.createOrder);
 
+// @route   POST api/orders/create-razorpay-order
+router.post('/create-razorpay-order', orderController.createRazorpayOrder);
+
 // @route   POST api/orders/verify
 router.post('/verify', orderController.verifyPayment);
 
