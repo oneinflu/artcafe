@@ -32,7 +32,7 @@ const AdminLogin = () => {
       background: '#1a1a1a'
     }}>
       <div className="admin-modal" style={{ background: 'white' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Lumina Admin Access</h2>
+        <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Artcafe Admin Access</h2>
         <form onSubmit={handleLogin}>
           <div className="form-group">
             <label>Email</label>

@@ -40,7 +40,7 @@ const blogs = [
 
 const seedBlogs = async () => {
   try {
-    await mongoose.connect('mongodb+srv://serviceinfotek:KoyxdFKQtONgCMfo@service.mmbfhta.mongodb.net/lumina?retryWrites=true&w=majority&appName=lumina');
+    await mongoose.connect('mongodb+srv://serviceinfotek:KoyxdFKQtONgCMfo@service.mmbfhta.mongodb.net/Artcafe?retryWrites=true&w=majority&appName=Artcafe');
     console.log("Connected to DB");
 
     // Remove existing blogs to avoid slug conflicts if rerunning

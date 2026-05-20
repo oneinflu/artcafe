@@ -35,7 +35,7 @@ const AdminSidebar = () => {
   return (
     <aside className="admin-sidebar">
       <div className="admin-logo">
-        LUMINA<span>.</span>
+        Artcafe<span>.</span>
         <small>ADMIN</small>
       </div>
       <nav className="admin-nav">

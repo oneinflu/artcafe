@@ -20,13 +20,13 @@ const seedData = async () => {
 
     // 1. Create Admin User
     const admin = new User({
-      name: 'Lumina Admin',
-      email: 'admin@lumina.com',
+      name: 'Artcafe Admin',
+      email: 'admin@Artcafe.com',
       password: 'adminpassword123',
       role: 'admin'
     });
     await admin.save();
-    console.log('Admin user created: admin@lumina.com / adminpassword123');
+    console.log('Admin user created: admin@Artcafe.com / adminpassword123');
 
     console.log('Seeding completed successfully!');
     process.exit();
