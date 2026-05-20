@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node backend/server.js",
+    "install-all": "npm install && npm install --prefix backend"
   },
   "dependencies": {
     "@myexamly/word-editor": "^0.0.5",

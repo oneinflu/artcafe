@@ -34,6 +34,18 @@ app.use('/api/artists', require('./routes/artists'));
 app.use('/api/architects', require('./routes/architects'));
 console.log('Routes registered.');
 
+// Serve static assets from the Vite React frontend build folder (one directory level up)
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Wildcard route to handle React Router client-side routing
+app.get('*', (req, res, next) => {
+  // If the request is for API or uploads, pass it to the 404/API handlers
+  if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+    return next();
+  }
+  res.sendFile(path.resolve(__dirname, '../dist', 'index.html'));
+});
+
 // 404 Not Found Handler
 app.use((req, res, next) => {
   console.log(`404 Hit: ${req.method} ${req.originalUrl}`);
