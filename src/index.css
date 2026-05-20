@@ -132,6 +132,7 @@ button {
   gap: 25px;
   flex: 1;
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .nav-right {
@@ -153,6 +154,7 @@ button {
   position: relative;
   padding: 10px 0;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .nav-link-luxury:hover {
@@ -161,6 +163,7 @@ button {
 
 .nav-item-wrapper {
   position: relative;
+  flex-shrink: 0;
 }
 
 .luxury-dropdown {

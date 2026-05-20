@@ -15,6 +15,9 @@ import AdminLayout from './admin/AdminLayout';
 import Dashboard from './admin/pages/Dashboard';
 import Inventory from './admin/pages/Inventory';
 import Categories from './admin/pages/Categories';
+import Spaces from './admin/pages/Spaces';
+import Styles from './admin/pages/Styles';
+import Collections from './admin/pages/Collections';
 import Attributes from './admin/pages/Attributes';
 import Orders from './admin/pages/Orders';
 import BulkRequests from './admin/pages/BulkRequests';
@@ -103,6 +106,9 @@ function App() {
           <Route path="inventory" element={<Inventory />} />
           <Route path="exclusive" element={<ExclusiveProducts />} />
           <Route path="categories" element={<Categories />} />
+          <Route path="spaces" element={<Spaces />} />
+          <Route path="styles" element={<Styles />} />
+          <Route path="collections" element={<Collections />} />
           <Route path="attributes" element={<Attributes />} />
           <Route path="orders" element={<Orders />} />
           <Route path="bulk-requests" element={<BulkRequests />} />

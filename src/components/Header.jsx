@@ -72,7 +72,6 @@ const Header = ({ isScrolled, showSearch, setShowSearch, searchQuery, setSearchQ
           <Link to="/architect-program" className="nav-link-luxury trade-cta">
             <span className="trade-badge">PRO</span> Architect Program
           </Link>
-          <Link to="/try-on-wall" className="nav-link-luxury">Try On Your Wall</Link>
           <Link to="/about" className="nav-link-luxury">About</Link>
           <div
             className="nav-item-wrapper"

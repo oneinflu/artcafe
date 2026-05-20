@@ -24,7 +24,7 @@ export const resolveImageUrl = (img, id = '') => {
     return artFallbacks[index];
   }
   if (img.startsWith('http') || img.startsWith('data:') || img.startsWith('/assets')) return img;
-  if (img.startsWith('backend/uploads/')) return `http://127.0.0.1:5001/${img.replace('backend/', '')}`;
-  if (img.startsWith('uploads/')) return `http://127.0.0.1:5001/${img}`;
+  if (img.startsWith('backend/uploads/')) return `http://127.0.0.1:5005/${img.replace('backend/', '')}`;
+  if (img.startsWith('uploads/')) return `http://127.0.0.1:5005/${img}`;
   return img;
 }

@@ -6,11 +6,13 @@ const ProductSchema = new mongoose.Schema({
   basePrice: { type: Number, required: true },
   compareAtPrice: { type: Number },
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
+  space: { type: mongoose.Schema.Types.ObjectId, ref: 'Space' },
+  style: { type: mongoose.Schema.Types.ObjectId, ref: 'Style' },
+  discoverCollection: { type: mongoose.Schema.Types.ObjectId, ref: 'Collection' },
   images: [{ type: String }], // URLs
   sku: { type: String, unique: true },
   inventory: { type: Number, default: 0 },
   displayOrder: { type: Number, default: 0 },
-  isFeatured: { type: Boolean, default: false },
   isExclusive: { type: Boolean, default: false },
   isCustomizationAvailable: { type: Boolean, default: true },
   attributes: [{

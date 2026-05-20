@@ -10,6 +10,9 @@ const Inventory = () => {
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [spaces, setSpaces] = useState([]);
+  const [styles, setStyles] = useState([]);
+  const [collections, setCollections] = useState([]);
   const [artists, setArtists] = useState([]);
   const [attributeGroups, setAttributeGroups] = useState([]);
   const [selectedAttrToAdd, setSelectedAttrToAdd] = useState('');
@@ -20,12 +23,14 @@ const Inventory = () => {
     basePrice: '',
     compareAtPrice: '',
     category: '',
+    space: '',
+    style: '',
+    discoverCollection: '',
     artist: '',
     sku: '',
     inventory: 0,
     displayOrder: 0,
     isCustomizationAvailable: true,
-    isFeatured: false,
     images: [],
     attributes: []
   });
@@ -33,6 +38,9 @@ const Inventory = () => {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+    fetchSpaces();
+    fetchStyles();
+    fetchCollections();
     fetchArtists();
     fetchAttributeGroups();
   }, []);
@@ -54,6 +62,33 @@ const Inventory = () => {
       setCategories(data);
     } catch (err) {
       console.error("Error fetching categories:", err);
+    }
+  };
+
+  const fetchSpaces = async () => {
+    try {
+      const data = await apiFetch('/spaces');
+      setSpaces(data);
+    } catch (err) {
+      console.error("Error fetching spaces:", err);
+    }
+  };
+
+  const fetchStyles = async () => {
+    try {
+      const data = await apiFetch('/styles');
+      setStyles(data);
+    } catch (err) {
+      console.error("Error fetching styles:", err);
+    }
+  };
+
+  const fetchCollections = async () => {
+    try {
+      const data = await apiFetch('/collections');
+      setCollections(data);
+    } catch (err) {
+      console.error("Error fetching collections:", err);
     }
   };
 
@@ -129,12 +164,14 @@ const Inventory = () => {
       basePrice: p.basePrice || '',
       compareAtPrice: p.compareAtPrice || '',
       category: p.category?._id || p.category || '',
+      space: p.space?._id || p.space || '',
+      style: p.style?._id || p.style || '',
+      discoverCollection: p.discoverCollection?._id || p.discoverCollection || '',
       artist: p.artist?._id || p.artist || '',
       sku: p.sku || '',
       inventory: p.inventory || 0,
       displayOrder: p.displayOrder || 0,
       isCustomizationAvailable: p.isCustomizationAvailable !== false,
-      isFeatured: p.isFeatured || false,
       isExclusive: p.isExclusive || false,
       images: [],
       existingImages: p.images || [],
@@ -154,12 +191,14 @@ const Inventory = () => {
       basePrice: '',
       compareAtPrice: '',
       category: '',
+      space: '',
+      style: '',
+      discoverCollection: '',
       artist: '',
       sku: '',
       inventory: 0,
       displayOrder: products.length > 0 ? Math.max(...products.map(p => p.displayOrder || 0)) + 1 : 1,
       isCustomizationAvailable: true,
-      isFeatured: false,
       isExclusive: false,
       images: [],
       existingImages: [],
@@ -244,7 +283,7 @@ const Inventory = () => {
                 <th>Category</th>
                 <th>Price</th>
                 <th>Stock</th>
-                <th>Featured</th>
+                <th>Collection</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -258,14 +297,20 @@ const Inventory = () => {
                       <div style={{ fontSize: '0.7rem', color: '#aaa' }}>SKU: {p.sku || 'N/A'}</div>
                     </div>
                   </td>
-                  <td><span className="status-pill delivered">{p.category?.name || 'Uncategorized'}</span></td>
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span className="status-pill delivered">{p.category?.name || 'Uncategorized'}</span>
+                      {p.space?.name && <span className="status-pill processing" style={{ fontSize: '0.7rem' }}>Space: {p.space.name}</span>}
+                      {p.style?.name && <span className="status-pill shipped" style={{ fontSize: '0.7rem' }}>Style: {p.style.name}</span>}
+                    </div>
+                  </td>
                   <td>
                     <div style={{ fontWeight: 800 }}>₹{p.basePrice}</div>
                     {p.compareAtPrice && <div style={{ fontSize: '0.75rem', color: '#aaa', textDecoration: 'line-through' }}>₹{p.compareAtPrice}</div>}
                   </td>
                   <td>{p.inventory || 0}</td>
                   <td>
-                    {p.isFeatured ? <span className="status-pill delivered">Featured</span> : '—'}
+                    {p.discoverCollection?.name ? <span className="status-pill delivered">{p.discoverCollection.name}</span> : '—'}
                     {p.isExclusive && <span className="status-pill cancelled" style={{ marginLeft: '5px' }}>Exclusive</span>}
                   </td>
                   <td>
@@ -412,10 +457,34 @@ const Inventory = () => {
                 </div>
 
                 <div className="form-group">
+                  <label>Space</label>
+                  <select value={formData.space} onChange={e => setFormData({ ...formData, space: e.target.value })}>
+                    <option value="">Select Space (Optional)</option>
+                    {spaces.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Style</label>
+                  <select value={formData.style} onChange={e => setFormData({ ...formData, style: e.target.value })}>
+                    <option value="">Select Style (Optional)</option>
+                    {styles.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="form-group">
                   <label>Artist / Designer</label>
                   <select value={formData.artist} onChange={e => setFormData({ ...formData, artist: e.target.value })}>
                     <option value="">Select Artist (Optional)</option>
                     {artists.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Collection (Discover Art)</label>
+                  <select value={formData.discoverCollection} onChange={e => setFormData({ ...formData, discoverCollection: e.target.value })}>
+                    <option value="">Select Collection (Optional)</option>
+                    {collections.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                   </select>
                 </div>
 
@@ -425,10 +494,6 @@ const Inventory = () => {
                 </div>
 
                 <div className="form-group" style={{ padding: '20px', background: '#f9f9f9', borderRadius: '15px', border: '1px solid #eee' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '15px' }}>
-                    <input type="checkbox" checked={formData.isFeatured} onChange={e => setFormData({ ...formData, isFeatured: e.target.checked })} />
-                    Featured Product
-                  </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '15px' }}>
                     <input type="checkbox" checked={formData.isExclusive} onChange={e => setFormData({ ...formData, isExclusive: e.target.checked })} />
                     Architect Exclusive (B2B)

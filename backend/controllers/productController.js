@@ -2,6 +2,9 @@ const Product = require('../models/Product');
 const Category = require('../models/Category');
 const AttributeGroup = require('../models/AttributeGroup');
 const Artist = require('../models/Artist');
+const Space = require('../models/Space');
+const Style = require('../models/Style');
+const Collection = require('../models/Collection');
 const fs = require('fs');
 const csv = require('csv-parser');
 
@@ -10,7 +13,10 @@ exports.getProducts = async (req, res) => {
     const products = await Product.find({ isExclusive: { $ne: true } })
       .populate('category')
       .populate('attributes.group')
-      .populate('artist');
+      .populate('artist')
+      .populate('space')
+      .populate('style')
+      .populate('discoverCollection');
     console.log(`Inventory: Sending ${products.length} standard products`);
     res.json(products);
   } catch (err) {
@@ -23,7 +29,10 @@ exports.getExclusiveProducts = async (req, res) => {
     const products = await Product.find({ isExclusive: true })
       .populate('category')
       .populate('attributes.group')
-      .populate('artist');
+      .populate('artist')
+      .populate('space')
+      .populate('style')
+      .populate('discoverCollection');
     console.log(`Exclusive: Sending ${products.length} exclusive products`);
     res.json(products);
   } catch (err) {
@@ -44,7 +53,13 @@ exports.createProduct = async (req, res) => {
     if (typeof data.attributes === 'string') data.attributes = JSON.parse(data.attributes);
     const newProduct = new Product(data);
     let product = await newProduct.save();
-    product = await Product.findById(product._id).populate('category').populate('attributes.group').populate('artist');
+    product = await Product.findById(product._id)
+      .populate('category')
+      .populate('attributes.group')
+      .populate('artist')
+      .populate('space')
+      .populate('style')
+      .populate('discoverCollection');
     res.json(product);
   } catch (err) {
     console.error(err);
@@ -78,7 +93,13 @@ exports.updateProduct = async (req, res) => {
     
     delete data.clearImages;
     if (typeof data.attributes === 'string') data.attributes = JSON.parse(data.attributes);
-    const product = await Product.findByIdAndUpdate(req.params.id, data, { new: true }).populate('category').populate('attributes.group').populate('artist');
+    const product = await Product.findByIdAndUpdate(req.params.id, data, { new: true })
+      .populate('category')
+      .populate('attributes.group')
+      .populate('artist')
+      .populate('space')
+      .populate('style')
+      .populate('discoverCollection');
     if (!product) return res.status(404).json({ msg: 'Product not found' });
     res.json(product);
   } catch (err) {
@@ -150,6 +171,42 @@ exports.bulkUploadProducts = async (req, res) => {
             continue;
           }
 
+          // Find or Create Space
+          const spaceName = row.space || row.room;
+          let spaceDoc = null;
+          if (spaceName?.trim()) {
+            spaceDoc = await Space.findOne({ name: { $regex: new RegExp(`^${spaceName.trim()}$`, 'i') } });
+            if (!spaceDoc) {
+              spaceDoc = new Space({ name: spaceName.trim() });
+              await spaceDoc.save();
+              console.log(`Bulk Upload: Created new Space "${spaceName.trim()}"`);
+            }
+          }
+
+          // Find or Create Style
+          const styleName = row.style;
+          let styleDoc = null;
+          if (styleName?.trim()) {
+            styleDoc = await Style.findOne({ name: { $regex: new RegExp(`^${styleName.trim()}$`, 'i') } });
+            if (!styleDoc) {
+              styleDoc = new Style({ name: styleName.trim() });
+              await styleDoc.save();
+              console.log(`Bulk Upload: Created new Style "${styleName.trim()}"`);
+            }
+          }
+
+          // Find or Create Collection
+          const collectionName = row.collection || row.discover_art || row.discover_collection;
+          let collectionDoc = null;
+          if (collectionName?.trim()) {
+            collectionDoc = await Collection.findOne({ name: { $regex: new RegExp(`^${collectionName.trim()}$`, 'i') } });
+            if (!collectionDoc) {
+              collectionDoc = new Collection({ name: collectionName.trim() });
+              await collectionDoc.save();
+              console.log(`Bulk Upload: Created new Collection "${collectionName.trim()}"`);
+            }
+          }
+
           // Find Artist
           const artistName = row.artist || row.creator;
           const artistDoc = artistName?.trim() 
@@ -173,7 +230,6 @@ exports.bulkUploadProducts = async (req, res) => {
                 const attrGroup = await AttributeGroup.findOne({ 
                   name: { $regex: new RegExp(`^${groupName}$`, 'i') } 
                 });
-
                 if (attrGroup) {
                   const vars = varsStr.split('|').map(v => v.trim()).filter(Boolean);
                   console.log(`    Found Group! Adding ${vars.length} variations: ${vars.join(', ')}`);
@@ -200,11 +256,10 @@ exports.bulkUploadProducts = async (req, res) => {
             sku: sku || undefined,
             inventory: parseInt(row.inventory || row.stock || 0),
             category: catDoc._id,
+            space: spaceDoc?._id,
+            style: styleDoc?._id,
+            discoverCollection: collectionDoc?._id,
             displayOrder: parseInt(row.displayorder || row.order || 0),
-            isFeatured: (() => {
-              const val = String(row.isfeatured || row.is_featured || '').toLowerCase().trim();
-              return val === 'true' || val === '1' || val === 'y' || val === 'yes';
-            })(),
             isExclusive: (() => {
               const rawVal = row.isexclusive || row.is_exclusive || row.exclusive;
               const val = String(rawVal || '').toLowerCase().trim();
@@ -247,11 +302,13 @@ exports.getTemplate = async (req, res) => {
       'CompareAtPrice',
       'Category',
       'SubCategory',
+      'Space',
+      'Style',
+      'Collection',
       'Artist',
       'SKU',
       'Inventory',
       'DisplayOrder',
-      'IsFeatured',
       'IsExclusive',
       'IsCustomizationAvailable',
       'Images'
@@ -270,11 +327,13 @@ exports.getTemplate = async (req, res) => {
       'CompareAtPrice': '599',
       'Category': 'Business Cards',
       'SubCategory': 'Premium Cards',
+      'Space': 'Living Room',
+      'Style': 'Modern Luxury',
+      'Collection': 'New Arrivals',
       'Artist': 'Pablo Picasso',
       'SKU': 'BC-001',
       'Inventory': '100',
       'DisplayOrder': '1',
-      'IsFeatured': 'true',
       'IsExclusive': 'false',
       'IsCustomizationAvailable': 'true',
       'Images': 'https://example.com/img1.jpg|https://example.com/img2.jpg'

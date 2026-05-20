@@ -1,14 +1,14 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 
 // Middleware
 app.use(express.json());
 app.use(cors());
-const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // DB Config
@@ -32,6 +32,9 @@ app.use('/api/bulk-requests', require('./routes/bulkRequests'));
 app.use('/api/case-studies', require('./routes/caseStudies'));
 app.use('/api/artists', require('./routes/artists'));
 app.use('/api/architects', require('./routes/architects'));
+app.use('/api/spaces', require('./routes/spaces'));
+app.use('/api/styles', require('./routes/styles'));
+app.use('/api/collections', require('./routes/collections'));
 console.log('Routes registered.');
 
 // Serve static assets from the Vite React frontend build folder (one directory level up)
