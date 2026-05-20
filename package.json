@@ -13,11 +13,14 @@
   },
   "dependencies": {
     "@myexamly/word-editor": "^0.0.5",
+    "@sasmeee/igdl": "^0.0.1-security",
+    "instagram-url-direct": "^2.0.7",
     "quill": "^2.0.3",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-quill-new": "^3.8.3",
-    "react-router-dom": "^7.15.0"
+    "react-router-dom": "^7.15.0",
+    "snapinsta": "^1.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

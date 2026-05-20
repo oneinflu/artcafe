@@ -10,7 +10,7 @@ const csv = require('csv-parser');
 
 exports.getProducts = async (req, res) => {
   try {
-    const products = await Product.find({ isExclusive: { $ne: true } })
+    const products = await Product.find({ isExclusive: { $ne: true }, isRental: { $ne: true } })
       .populate('category')
       .populate('subCategory')
       .populate('attributes.group')
@@ -27,7 +27,7 @@ exports.getProducts = async (req, res) => {
 
 exports.getExclusiveProducts = async (req, res) => {
   try {
-    const products = await Product.find({ isExclusive: true })
+    const products = await Product.find({ isExclusive: true, isRental: { $ne: true } })
       .populate('category')
       .populate('subCategory')
       .populate('attributes.group')
@@ -38,6 +38,26 @@ exports.getExclusiveProducts = async (req, res) => {
     console.log(`Exclusive: Sending ${products.length} exclusive products`);
     res.json(products);
   } catch (err) {
+    res.status(500).send('Server error');
+  }
+};
+
+exports.getProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id)
+      .populate('category')
+      .populate('subCategory')
+      .populate('attributes.group')
+      .populate('artist')
+      .populate('space')
+      .populate('style')
+      .populate('discoverCollection');
+    if (!product) {
+      return res.status(404).json({ msg: 'Product not found' });
+    }
+    res.json(product);
+  } catch (err) {
+    console.error(err);
     res.status(500).send('Server error');
   }
 };
@@ -379,4 +399,238 @@ exports.getTemplate = async (req, res) => {
     console.error("Template Error:", err);
     res.status(500).json({ msg: 'Error generating template' });
   }
+};
+
+exports.getRentalProducts = async (req, res) => {
+  try {
+    const products = await Product.find({ isRental: true })
+      .populate('category')
+      .populate('subCategory')
+      .populate('artist')
+      .populate('space')
+      .populate('style')
+      .populate('discoverCollection');
+    console.log(`Rentals: Sending ${products.length} rental products`);
+    res.json(products);
+  } catch (err) {
+    res.status(500).send('Server error');
+  }
+};
+
+exports.getRentalTemplate = async (req, res) => {
+  try {
+    const headers = [
+      'Name',
+      'Description',
+      'Price',
+      'CompareAtPrice',
+      'Category',
+      'SubCategory',
+      'Space',
+      'Style',
+      'Collection',
+      'Artist',
+      'SKU',
+      'Inventory',
+      'DisplayOrder',
+      'RentalDepositPercent',
+      'RentalPrice3M',
+      'RentalPrice6M',
+      'RentalPrice9M',
+      'FixedSize',
+      'FixedFrame',
+      'FixedFrameColor',
+      'FixedMount',
+      'FixedMountColor',
+      'FixedGlaze',
+      'Images'
+    ];
+
+    const exampleData = {
+      'Name': 'Sunlit Meadows Landscape (Rental)',
+      'Description': 'Exclusive landscape oil painting print for monthly rental.',
+      'Price': '25000',
+      'CompareAtPrice': '30000',
+      'Category': 'Art Prints',
+      'SubCategory': 'Heritage Landscapes',
+      'Space': 'Living Room',
+      'Style': 'Quiet Luxury',
+      'Collection': 'Best Sellers',
+      'Artist': 'Raja Ravi Varma',
+      'SKU': 'RENT-SML-001',
+      'Inventory': '5',
+      'DisplayOrder': '1',
+      'RentalDepositPercent': '20',
+      'RentalPrice3M': '1250',
+      'RentalPrice6M': '1000',
+      'RentalPrice9M': '850',
+      'FixedSize': 'A3',
+      'FixedFrame': 'Box Frame',
+      'FixedFrameColor': 'Black',
+      'FixedMount': 'Single Mount',
+      'FixedMountColor': 'Off White',
+      'FixedGlaze': 'Premium Glass',
+      'Images': 'https://images.unsplash.com/photo-1506744038136-46273834b3fb'
+    };
+
+    const headerLine = headers.join(',');
+    const exampleLine = headers.map(h => `"${exampleData[h] || ''}"`).join(',');
+    const csvContent = headerLine + '\n' + exampleLine;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=rental_product_template.csv');
+    res.status(200).send(csvContent);
+  } catch (err) {
+    console.error("Rental Template Error:", err);
+    res.status(500).json({ msg: 'Error generating rental template' });
+  }
+};
+
+exports.bulkUploadRentalProducts = async (req, res) => {
+  console.log('--- Bulk Rental Upload Started ---');
+  if (!req.file) {
+    return res.status(400).send('No file uploaded');
+  }
+  const results = [];
+  fs.createReadStream(req.file.path)
+    .pipe(csv({ mapHeaders: ({ header }) => header.trim() }))
+    .on('data', (data) => {
+      const normalizedRow = {};
+      Object.keys(data).forEach(key => {
+        normalizedRow[key.trim().toLowerCase()] = data[key];
+      });
+      results.push(normalizedRow);
+    })
+    .on('end', async () => {
+      try {
+        let successCount = 0;
+        for (const row of results) {
+          const name = row.name || row.title || row.product;
+          const basePrice = row.price || row.baseprice || row.mrp;
+          
+          if (!name || !basePrice) continue;
+
+          // Find or Create Category & Subcategory
+          const subCatName = row.subcategory || row.sub_category;
+          const catName = row.category;
+
+          let catDoc = null;
+          let subCatDoc = null;
+
+          if (catName?.trim()) {
+            catDoc = await Category.findOne({ name: { $regex: new RegExp(`^${catName.trim()}$`, 'i') }, parentCategory: null });
+            if (!catDoc) {
+              catDoc = new Category({ name: catName.trim(), parentCategory: null });
+              await catDoc.save();
+            }
+          }
+
+          if (subCatName?.trim()) {
+            subCatDoc = await Category.findOne({ 
+              name: { $regex: new RegExp(`^${subCatName.trim()}$`, 'i') },
+              parentCategory: catDoc ? catDoc._id : { $ne: null }
+            });
+            if (!subCatDoc) {
+              subCatDoc = new Category({ 
+                name: subCatName.trim(), 
+                parentCategory: catDoc ? catDoc._id : null
+              });
+              await subCatDoc.save();
+            }
+          }
+
+          if (!catDoc && subCatDoc) {
+            if (subCatDoc.parentCategory) {
+              catDoc = await Category.findById(subCatDoc.parentCategory);
+            } else {
+              catDoc = subCatDoc;
+              subCatDoc = null;
+            }
+          }
+          
+          if (!catDoc) continue;
+
+          // Space, Style, Collection, Artist
+          const spaceName = row.space || row.room;
+          let spaceDoc = null;
+          if (spaceName?.trim()) {
+            spaceDoc = await Space.findOne({ name: { $regex: new RegExp(`^${spaceName.trim()}$`, 'i') } });
+            if (!spaceDoc) {
+              spaceDoc = new Space({ name: spaceName.trim() });
+              await spaceDoc.save();
+            }
+          }
+
+          const styleName = row.style;
+          let styleDoc = null;
+          if (styleName?.trim()) {
+            styleDoc = await Style.findOne({ name: { $regex: new RegExp(`^${styleName.trim()}$`, 'i') } });
+            if (!styleDoc) {
+              styleDoc = new Style({ name: styleName.trim() });
+              await styleDoc.save();
+            }
+          }
+
+          const collectionName = row.collection || row.discover_art || row.discover_collection;
+          let collectionDoc = null;
+          if (collectionName?.trim()) {
+            collectionDoc = await Collection.findOne({ name: { $regex: new RegExp(`^${collectionName.trim()}$`, 'i') } });
+            if (!collectionDoc) {
+              collectionDoc = new Collection({ name: collectionName.trim() });
+              await collectionDoc.save();
+            }
+          }
+
+          const artistName = row.artist || row.creator;
+          const artistDoc = artistName?.trim() 
+            ? await Artist.findOne({ name: { $regex: new RegExp(`^${artistName.trim()}$`, 'i') } })
+            : null;
+
+          const images = row.images ? row.images.split('|').map(u => u.trim()).filter(Boolean) : [];
+          
+          const sku = row.sku?.trim();
+          const filter = sku ? { sku } : { name: name.trim() };
+
+          await Product.findOneAndUpdate(filter, {
+            name: name.trim(),
+            description: row.description || '',
+            basePrice: parseFloat(basePrice),
+            compareAtPrice: (row.compareatprice || row.sale_price) ? parseFloat(row.compareatprice || row.sale_price) : undefined,
+            sku: sku || undefined,
+            inventory: parseInt(row.inventory || row.stock || 0),
+            category: catDoc._id,
+            subCategory: subCatDoc?._id || null,
+            space: spaceDoc?._id,
+            style: styleDoc?._id,
+            discoverCollection: collectionDoc?._id,
+            displayOrder: parseInt(row.displayorder || row.order || 0),
+            isExclusive: false,
+            isCustomizationAvailable: false,
+            isRental: true,
+            rentalDepositPercent: row.rentaldepositpercent ? parseFloat(row.rentaldepositpercent) : 20,
+            rentalPrice3M: row.rentalprice3m ? parseFloat(row.rentalprice3m) : undefined,
+            rentalPrice6M: row.rentalprice6m ? parseFloat(row.rentalprice6m) : undefined,
+            rentalPrice9M: row.rentalprice9m ? parseFloat(row.rentalprice9m) : undefined,
+            fixedSize: row.fixedsize || '',
+            fixedFrame: row.fixedframe || '',
+            fixedFrameColor: row.fixedframecolor || '',
+            fixedMount: row.fixedmount || '',
+            fixedMountColor: row.fixedmountcolor || '',
+            fixedGlaze: row.fixedglaze || '',
+            images,
+            artist: artistDoc?._id
+          }, { upsert: true, new: true, setDefaultsOnInsert: true });
+          successCount++;
+        }
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.json({ msg: `${successCount} out of ${results.length} rental products processed successfully` });
+      } catch (err) {
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.status(500).json({ msg: 'Error: ' + err.message });
+      }
+    })
+    .on('error', (err) => {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      res.status(500).json({ msg: 'File reading error: ' + err.message });
+    });
 };

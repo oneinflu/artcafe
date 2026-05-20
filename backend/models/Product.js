@@ -22,6 +22,19 @@ const ProductSchema = new mongoose.Schema({
   }],
   artist: { type: mongoose.Schema.Types.ObjectId, ref: 'Artist' },
 
+  // Rental specific fields
+  isRental: { type: Boolean, default: false },
+  rentalDepositPercent: { type: Number, default: 20 },
+  rentalPrice3M: { type: Number },
+  rentalPrice6M: { type: Number },
+  rentalPrice9M: { type: Number },
+  fixedSize: { type: String },
+  fixedFrame: { type: String },
+  fixedFrameColor: { type: String },
+  fixedMount: { type: String },
+  fixedMountColor: { type: String },
+  fixedGlaze: { type: String },
+
   createdAt: { type: Date, default: Date.now }
 });
 

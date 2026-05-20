@@ -18,12 +18,17 @@ const CaseStudies = () => {
     content: '',
     category: '',
     client: '',
+    placement: 'hero',
     isPublished: false,
     featuredImage: null,
+    beforeImage: null,
+    afterImage: null,
     tags: ''
   });
 
   const [imagePreview, setImagePreview] = useState(null);
+  const [beforePreview, setBeforePreview] = useState(null);
+  const [afterPreview, setAfterPreview] = useState(null);
 
   useEffect(() => {
     fetchStudies();
@@ -59,11 +64,16 @@ const CaseStudies = () => {
       content: study.content || '',
       category: study.category?._id || study.category || '',
       client: study.client || '',
+      placement: study.placement || 'hero',
       isPublished: study.isPublished || false,
       featuredImage: null,
+      beforeImage: null,
+      afterImage: null,
       tags: study.tags ? study.tags.join(', ') : ''
     });
     setImagePreview(resolveImageUrl(study.featuredImage));
+    setBeforePreview(resolveImageUrl(study.beforeImage));
+    setAfterPreview(resolveImageUrl(study.afterImage));
     setView('editor');
   };
 
@@ -76,11 +86,16 @@ const CaseStudies = () => {
       content: '',
       category: '',
       client: '',
+      placement: 'hero',
       isPublished: false,
       featuredImage: null,
+      beforeImage: null,
+      afterImage: null,
       tags: ''
     });
     setImagePreview(null);
+    setBeforePreview(null);
+    setAfterPreview(null);
     setView('editor');
   };
 
@@ -89,8 +104,8 @@ const CaseStudies = () => {
     
     const data = new FormData();
     Object.keys(formData).forEach(key => {
-      if (key === 'featuredImage') {
-        if (formData.featuredImage) data.append('featuredImage', formData.featuredImage);
+      if (['featuredImage', 'beforeImage', 'afterImage'].includes(key)) {
+        if (formData[key]) data.append(key, formData[key]);
       } else {
         data.append(key, formData[key] || '');
       }
@@ -193,32 +208,44 @@ const CaseStudies = () => {
               </div>
 
               <div className="form-group">
-                <label>Featured Image</label>
-                <div style={{ 
-                  border: '2px dashed #ddd', 
-                  borderRadius: '12px', 
-                  padding: '15px', 
-                  textAlign: 'center', 
-                  position: 'relative'
-                }}>
-                  {imagePreview ? (
-                    <img src={imagePreview} alt="Preview" style={{ width: '100%', borderRadius: '8px' }} />
-                  ) : (
-                    <span style={{ color: '#aaa', fontSize: '0.8rem' }}>Upload Banner</span>
-                  )}
-                  <input 
-                    type="file" 
-                    style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} 
-                    onChange={e => {
-                      const file = e.target.files[0];
-                      if (file) {
-                        setFormData({ ...formData, featuredImage: file });
-                        setImagePreview(URL.createObjectURL(file));
-                      }
-                    }}
-                  />
-                </div>
+                <label>Homepage Placement</label>
+                <select value={formData.placement} onChange={e => setFormData({ ...formData, placement: e.target.value })}>
+                  <option value="hero">🎬 Top Section (Hero Slider)</option>
+                  <option value="comparison">⚡ Comparison (Before vs After)</option>
+                  <option value="client_work">🏆 Works Done for Clients</option>
+                </select>
               </div>
+
+              {formData.placement === 'comparison' ? (
+                <>
+                  <div className="form-group">
+                    <label>Before Image</label>
+                    <div style={{ border: '2px dashed #ddd', borderRadius: '12px', padding: '12px', textAlign: 'center', position: 'relative' }}>
+                      {beforePreview ? <img src={beforePreview} alt="Before" style={{ width: '100%', borderRadius: '6px' }} /> : <span style={{ color: '#aaa', fontSize: '0.8rem' }}>Upload "Before" Image</span>}
+                      <input type="file" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} onChange={e => { const f = e.target.files[0]; if(f){ setFormData({...formData, beforeImage: f}); setBeforePreview(URL.createObjectURL(f)); }}} />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>After Image</label>
+                    <div style={{ border: '2px dashed #ddd', borderRadius: '12px', padding: '12px', textAlign: 'center', position: 'relative' }}>
+                      {afterPreview ? <img src={afterPreview} alt="After" style={{ width: '100%', borderRadius: '6px' }} /> : <span style={{ color: '#aaa', fontSize: '0.8rem' }}>Upload "After" Image</span>}
+                      <input type="file" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} onChange={e => { const f = e.target.files[0]; if(f){ setFormData({...formData, afterImage: f}); setAfterPreview(URL.createObjectURL(f)); }}} />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="form-group">
+                  <label>Featured Image</label>
+                  <div style={{ border: '2px dashed #ddd', borderRadius: '12px', padding: '15px', textAlign: 'center', position: 'relative' }}>
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="Preview" style={{ width: '100%', borderRadius: '8px' }} />
+                    ) : (
+                      <span style={{ color: '#aaa', fontSize: '0.8rem' }}>Upload Banner</span>
+                    )}
+                    <input type="file" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} onChange={e => { const file = e.target.files[0]; if (file) { setFormData({ ...formData, featuredImage: file }); setImagePreview(URL.createObjectURL(file)); }}} />
+                  </div>
+                </div>
+              )}
 
                <div className="form-group">
                 <label>Excerpt</label>
@@ -270,7 +297,7 @@ const CaseStudies = () => {
               <tr>
                 <th>Banner</th>
                 <th>Title</th>
-                <th>Category</th>
+                <th>Placement</th>
                 <th>Client</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -287,7 +314,11 @@ const CaseStudies = () => {
                     />
                   </td>
                   <td style={{ fontWeight: 800 }}>{s.title}</td>
-                  <td><span className="status-pill delivered">{s.category?.name || 'Uncategorized'}</span></td>
+                  <td>
+                    <span className={`status-pill ${s.placement === 'comparison' ? 'processing' : s.placement === 'client_work' ? 'delivered' : 'pending'}`}>
+                      {s.placement === 'comparison' ? '⚡ Comparison' : s.placement === 'client_work' ? '🏆 Client Work' : '🎬 Hero'}
+                    </span>
+                  </td>
                   <td>{s.client || 'N/A'}</td>
                   <td>
                     {s.isPublished ? (

@@ -11,10 +11,13 @@ console.log('Products Router Loading...');
 const localUpload = multer({ dest: path.join(__dirname, '../uploads/') });
 
 router.get('/exclusive', productController.getExclusiveProducts);
-
+router.get('/rentals', productController.getRentalProducts);
+router.get('/rentals/template', productController.getRentalTemplate);
+router.post('/rentals/bulk', auth('admin'), localUpload.single('file'), productController.bulkUploadRentalProducts);
 router.get('/template', productController.getTemplate);
 
 router.get('/', productController.getProducts);
+router.get('/:id', productController.getProduct);
 
 router.post('/bulk', auth('admin'), localUpload.single('file'), productController.bulkUploadProducts);
 router.post('/', auth('admin'), cloudinaryProductUpload.array('images', 10), productController.createProduct);

@@ -2,145 +2,112 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { resolveImageUrl, slugify } from '../utils/helpers';
 
-const DUMMY_PRODUCTS = [
-  {
-    id: 1,
-    name: "Krishna with Gopis - Nathdwara",
-    category: "Pichwai Art",
-    region: "Rajasthan",
-    artist: "Ghanshyam Sarode",
-    medium: "Natural Colors",
-    size: "Large",
-    theme: "Spiritual",
-    canvas: "Cloth",
-    color: "Multicoloured",
-    layout: "Horizontal",
-    basePrice: 45000,
-    image: "https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?auto=format&fit=crop&q=80&w=800",
-    isLimited: true
-  },
-  {
-    id: 2,
-    name: "Tree of Life - Gond Mastery",
-    category: "Gond",
-    region: "Madhya Pradesh",
-    artist: "Harjeet Kaur",
-    medium: "Acrylic Colors",
-    size: "Medium",
-    theme: "Nature",
-    canvas: "Handmade Paper",
-    color: "Green",
-    layout: "Vertical",
-    basePrice: 12500,
-    image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=800"
-  },
-  {
-    id: 3,
-    name: "Abstract Miniature - Royal Hunt",
-    category: "Miniature Paintings",
-    region: "Gujarat",
-    artist: "Antique Arts",
-    medium: "Poster Colors",
-    size: "Small",
-    theme: "Birds",
-    canvas: "Paper",
-    color: "Yellow",
-    layout: "Square",
-    basePrice: 8500,
-    image: "https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=800"
-  },
-  {
-    id: 4,
-    name: "Batik Floral Composition",
-    category: "Batik Art",
-    region: "Andhra Pradesh",
-    artist: "K. Lakshminarayan",
-    medium: "Natural Colors",
-    size: "Medium",
-    theme: "Nature",
-    canvas: "Cotton Cloth",
-    color: "Brown",
-    layout: "Vertical",
-    basePrice: 6500,
-    image: "https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800"
-  },
-  {
-    id: 5,
-    name: "Dhokra Bronze Sculpture - Tribal Dance",
-    category: "Dhokra",
-    region: "Andhra Pradesh",
-    artist: "Avinash Karn",
-    medium: "Brass",
-    size: "Small",
-    theme: "Birds",
-    canvas: "Wood",
-    color: "Black",
-    layout: "Circular",
-    basePrice: 15000,
-    image: "https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?auto=format&fit=crop&q=80&w=800"
-  },
-  {
-    id: 6,
-    name: "Shreenathji Pichwai - Lotus Pond",
-    category: "Pichwai Art",
-    region: "Rajasthan",
-    artist: "Harinath N",
-    medium: "Natural Colors",
-    size: "Large",
-    theme: "Spiritual",
-    canvas: "Cloth",
-    color: "Blue",
-    layout: "Horizontal",
-    basePrice: 38000,
-    image: "https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&q=80&w=800"
-  }
-];
-
-const FILTER_GROUPS = [
-  { name: "Artform Name", field: "category", options: ["Gond", "Kalamkari", "Madhubani", "Miniature Paintings", "Pichwai Art", "Dhokra", "Batik Art"] },
-  { name: "Artform Region", field: "region", options: ["Andhra Pradesh", "Assam", "Bihar", "Gujarat", "Kerala", "Madhya Pradesh", "Rajasthan"] },
-  { name: "Artwork Medium", field: "medium", options: ["Acrylic Colors", "Natural Colors", "Poster Colors", "Sculpture", "Brass"] },
-  { name: "Artwork Theme", field: "theme", options: ["Nature", "Tree of Life", "Animals", "Birds", "Spiritual"] },
-  { name: "Artwork Canvas", field: "canvas", options: ["Canvas", "Handmade Paper", "Cloth", "Paper", "Cotton Cloth", "Wood"] },
-  { name: "Artwork Layout", field: "layout", options: ["Circular", "Square", "Horizontal", "Vertical"] }
-];
-
-const ShopPage = () => {
-  const [searchParams] = useSearchParams();
+const ShopPage = ({ products = [], categories = [], spaces = [], styles = [], collections = [] }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('featured');
-  const [filters, setFilters] = useState({
-    category: [],
-    region: [],
-    medium: [],
-    theme: [],
-    canvas: [],
-    layout: [],
-    price: [0, 100000]
-  });
+  const [maxPrice, setMaxPrice] = useState(100000);
 
-  const toggleFilter = (field, value) => {
-    setFilters(prev => {
-      const current = prev[field];
-      const next = current.includes(value) 
-        ? current.filter(v => v !== value) 
-        : [...current, value];
-      return { ...prev, [field]: next };
-    });
+  // Filter IDs state
+  const [selectedCollections, setSelectedCollections] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedSpaces, setSelectedSpaces] = useState([]);
+  const [selectedStyles, setSelectedStyles] = useState([]);
+
+  // Sync with URL query parameters on mount or change
+  useEffect(() => {
+    const colParam = searchParams.get('collection');
+    const spaceParam = searchParams.get('space');
+    const styleParam = searchParams.get('style');
+    const catParam = searchParams.get('category');
+
+    if (colParam && collections.length > 0) {
+      const match = collections.find(c => slugify(c.name) === colParam);
+      if (match) setSelectedCollections([match._id]);
+    } else if (!colParam) {
+      setSelectedCollections([]);
+    }
+
+    if (spaceParam && spaces.length > 0) {
+      const match = spaces.find(s => slugify(s.name) === spaceParam);
+      if (match) setSelectedSpaces([match._id]);
+    } else if (!spaceParam) {
+      setSelectedSpaces([]);
+    }
+
+    if (styleParam && styles.length > 0) {
+      const match = styles.find(s => slugify(s.name) === styleParam);
+      if (match) setSelectedStyles([match._id]);
+    } else if (!styleParam) {
+      setSelectedStyles([]);
+    }
+
+    if (catParam && categories.length > 0) {
+      const match = categories.find(c => slugify(c.name) === catParam);
+      if (match) setSelectedCategories([match._id]);
+    } else if (!catParam) {
+      setSelectedCategories([]);
+    }
+  }, [searchParams, collections, spaces, styles, categories]);
+
+  const toggleFilter = (field, id) => {
+    // Clear URL parameters since user is manually interacting with the filter sidebar
+    setSearchParams({});
+
+    if (field === 'collection') {
+      setSelectedCollections(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    } else if (field === 'category') {
+      setSelectedCategories(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    } else if (field === 'space') {
+      setSelectedSpaces(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    } else if (field === 'style') {
+      setSelectedStyles(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    }
   };
 
-  const filteredProducts = DUMMY_PRODUCTS
-    .filter(p => filters.category.length === 0 || filters.category.includes(p.category))
-    .filter(p => filters.region.length === 0 || filters.region.includes(p.region))
-    .filter(p => filters.medium.length === 0 || filters.medium.includes(p.medium))
-    .filter(p => filters.theme.length === 0 || filters.theme.includes(p.theme))
-    .filter(p => filters.canvas.length === 0 || filters.canvas.includes(p.canvas))
-    .filter(p => filters.layout.length === 0 || filters.layout.includes(p.layout))
-    .filter(p => p.basePrice >= filters.price[0] && p.basePrice <= filters.price[1])
+  const resetAllFilters = () => {
+    setSearchParams({});
+    setSelectedCollections([]);
+    setSelectedCategories([]);
+    setSelectedSpaces([]);
+    setSelectedStyles([]);
+    setMaxPrice(100000);
+  };
+
+  // Perform real-time filtering & sorting
+  const filteredProducts = products
+    .filter(p => {
+      // 1. Filter by Collection
+      if (selectedCollections.length > 0) {
+        const pColId = p.discoverCollection?._id || p.discoverCollection;
+        if (!selectedCollections.includes(pColId)) return false;
+      }
+      // 2. Filter by Category
+      if (selectedCategories.length > 0) {
+        const pCatId = p.category?._id || p.category;
+        const pSubCatId = p.subCategory?._id || p.subCategory;
+        const hasMatch = selectedCategories.includes(pCatId) || (pSubCatId && selectedCategories.includes(pSubCatId));
+        if (!hasMatch) return false;
+      }
+      // 3. Filter by Space
+      if (selectedSpaces.length > 0) {
+        const pSpaceId = p.space?._id || p.space;
+        if (!selectedSpaces.includes(pSpaceId)) return false;
+      }
+      // 4. Filter by Style
+      if (selectedStyles.length > 0) {
+        const pStyleId = p.style?._id || p.style;
+        if (!selectedStyles.includes(pStyleId)) return false;
+      }
+      // 5. Filter by Price
+      if (p.basePrice > maxPrice) return false;
+
+      return true;
+    })
     .sort((a, b) => {
       if (sortBy === 'price-low') return a.basePrice - b.basePrice;
       if (sortBy === 'price-high') return b.basePrice - a.basePrice;
-      return 0;
+      return 0; // Default featured display order
     });
 
   return (
@@ -152,7 +119,7 @@ const ShopPage = () => {
             <Link to="/">HOME</Link> <span>/</span> <strong>SHOP ALL</strong>
           </div>
           <h1 className="shop-title-large">The Curation</h1>
-          <p className="shop-desc-minimal">Exploring the soul of Indian craftsmanship, from heritage weaves to contemporary masterstrokes.</p>
+          <p className="shop-desc-minimal">Exploring premium fine art collections, crafted with heritage integrity and contemporary elegance.</p>
         </div>
       </section>
 
@@ -160,66 +127,140 @@ const ShopPage = () => {
         {/* SIDEBAR FILTERS */}
         <aside className="shop-sidebar-new">
           <div className="filter-group-item">
-            <h4 className="filter-heading">Price</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h4 className="filter-heading" style={{ margin: 0 }}>Filters</h4>
+              <button 
+                onClick={resetAllFilters} 
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  color: '#ff6b00', 
+                  fontSize: '0.8rem', 
+                  fontWeight: 600, 
+                  cursor: 'pointer', 
+                  textDecoration: 'underline',
+                  padding: 0
+                }}
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          {/* Price Filter */}
+          <div className="filter-group-item">
+            <h4 className="filter-heading">Price Range</h4>
             <div className="price-inputs">
-              <div className="price-box"><span>₹</span><input type="text" placeholder="From" value={filters.price[0]} readOnly /></div>
-              <div className="price-box"><span>₹</span><input type="text" placeholder="To" value={filters.price[1]} readOnly /></div>
+              <div className="price-box"><span>₹</span><input type="text" value="0" readOnly /></div>
+              <div className="price-box"><span>₹</span><input type="text" value={maxPrice.toLocaleString()} readOnly /></div>
             </div>
             <div className="range-slider-wrapper">
               <input 
                 type="range" 
-                min="0" 
+                min="500" 
                 max="100000" 
-                step="1000"
-                value={filters.price[1]}
-                onChange={(e) => setFilters(prev => ({...prev, price: [prev.price[0], parseInt(e.target.value)]}))}
+                step="500"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(parseInt(e.target.value))}
                 className="luxury-range-input"
               />
               <div className="range-labels">
-                <span>₹0</span>
+                <span>₹500</span>
                 <span>₹1L+</span>
               </div>
             </div>
           </div>
 
-          {FILTER_GROUPS.map(group => (
-            <div key={group.name} className="filter-group-item">
-              <h4 className="filter-heading">{group.name}</h4>
+          {/* Collections Filter */}
+          {collections.length > 0 && (
+            <div className="filter-group-item">
+              <h4 className="filter-heading">Collections</h4>
               <div className="filter-options">
-                {group.options.map(opt => (
-                  <label key={opt} className="filter-checkbox-wrap">
+                {collections.map(c => (
+                  <label key={c._id} className="filter-checkbox-wrap">
                     <input 
                       type="checkbox" 
-                      checked={filters[group.field].includes(opt)}
-                      onChange={() => toggleFilter(group.field, opt)}
+                      checked={selectedCollections.includes(c._id)}
+                      onChange={() => toggleFilter('collection', c._id)}
                     />
                     <span className="checkbox-custom"></span>
-                    <span className="label-text">{opt}</span>
+                    <span className="label-text">{c.name}</span>
                   </label>
                 ))}
               </div>
             </div>
-          ))}
+          )}
 
-          <div className="filter-group-item">
-            <h4 className="filter-heading">Artwork Size</h4>
-            <div className="size-selector-grid">
-              {['Small', 'Medium', 'Large'].map(size => (
-                <button key={size} className="size-btn">{size}</button>
-              ))}
+          {/* Categories Filter */}
+          {categories.length > 0 && (
+            <div className="filter-group-item">
+              <h4 className="filter-heading">Root Categories</h4>
+              <div className="filter-options">
+                {categories.filter(c => !c.parentCategory).map(c => (
+                  <label key={c._id} className="filter-checkbox-wrap">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedCategories.includes(c._id)}
+                      onChange={() => toggleFilter('category', c._id)}
+                    />
+                    <span className="checkbox-custom"></span>
+                    <span className="label-text">{c.name}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Spaces Filter */}
+          {spaces.length > 0 && (
+            <div className="filter-group-item">
+              <h4 className="filter-heading">Spaces</h4>
+              <div className="filter-options">
+                {spaces.map(s => (
+                  <label key={s._id} className="filter-checkbox-wrap">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedSpaces.includes(s._id)}
+                      onChange={() => toggleFilter('space', s._id)}
+                    />
+                    <span className="checkbox-custom"></span>
+                    <span className="label-text">{s.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Styles Filter */}
+          {styles.length > 0 && (
+            <div className="filter-group-item">
+              <h4 className="filter-heading">Styles</h4>
+              <div className="filter-options">
+                {styles.map(s => (
+                  <label key={s._id} className="filter-checkbox-wrap">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedStyles.includes(s._id)}
+                      onChange={() => toggleFilter('style', s._id)}
+                    />
+                    <span className="checkbox-custom"></span>
+                    <span className="label-text">{s.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </aside>
 
         {/* SHOP CONTENT */}
         <main className="shop-content-new">
           <div className="shop-top-bar">
             <div className="results-info">
-              <span>Showing <strong>{filteredProducts.length}</strong> authenticated works</span>
+              <span>Showing <strong>{filteredProducts.length}</strong> premium works</span>
             </div>
             <div className="shop-controls-right">
               <select className="sort-select-minimal" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                <option value="featured">Featured</option>
+                <option value="featured">Featured / Order</option>
                 <option value="price-low">Price: Low to High</option>
                 <option value="price-high">Price: High to Low</option>
               </select>
@@ -232,32 +273,39 @@ const ShopPage = () => {
           </div>
 
           <div className={`product-grid-new-age ${viewMode}`}>
-            {filteredProducts.map(p => (
-              <div key={p.id} className="product-card-minimal">
-                <Link to={`/product/${slugify(p.name)}`} className="p-card-link">
-                  <div className="p-img-box">
-                    <img src={p.image} alt={p.name} />
-                    {p.isLimited && <span className="p-tag-limited">LIMITED</span>}
-                    <div className="p-quick-view">QUICK VIEW</div>
-                  </div>
-                  <div className="p-info-box">
-                    <span className="p-cat-tag">{p.category}</span>
-                    <h4 className="p-title-name">{p.name}</h4>
-                    <div className="p-footer">
-                      <span className="p-price-val">₹{p.basePrice.toLocaleString()}</span>
-                      <span className="p-region-tag">{p.region}</span>
+            {filteredProducts.map(p => {
+              const rootCat = categories.find(c => c._id === (p.category?._id || p.category));
+              return (
+                <div key={p._id} className="product-card-minimal">
+                  <Link to={`/product/${p._id}`} className="p-card-link">
+                    <div className="p-img-box">
+                      <img src={resolveImageUrl(p.images?.[0])} alt={p.name} />
+                      {p.isExclusive && <span className="p-tag-limited" style={{ backgroundColor: '#ff6b00' }}>EXCLUSIVE</span>}
+                      <div className="p-quick-view">VIEW MASTERPIECE</div>
                     </div>
-                  </div>
-                </Link>
-              </div>
-            ))}
+                    <div className="p-info-box">
+                      <span className="p-cat-tag">{rootCat ? rootCat.name : 'Fine Art'}</span>
+                      <h4 className="p-title-name">{p.name}</h4>
+                      <div className="p-footer">
+                        <span className="p-price-val">₹{p.basePrice.toLocaleString()}</span>
+                        {p.artist && (
+                          <span className="p-region-tag" style={{ fontStyle: 'italic', fontWeight: 600 }}>
+                            {p.artist.name || 'Master Artist'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              );
+            })}
           </div>
 
           {filteredProducts.length === 0 && (
             <div className="empty-shop-state">
-              <h3>No masterpieces found</h3>
-              <p>Try resetting your filters to explore our full collection.</p>
-              <button className="reset-btn-minimal" onClick={() => setFilters({category: [], region: [], medium: [], theme: [], canvas: [], layout: [], price: [0, 100000]})}>RESET ALL FILTERS</button>
+              <h3>No masterpieces match your filters</h3>
+              <p>Reset your selections to explore our full fine art curation.</p>
+              <button className="reset-btn-minimal" onClick={resetAllFilters}>RESET ALL FILTERS</button>
             </div>
           )}
         </main>

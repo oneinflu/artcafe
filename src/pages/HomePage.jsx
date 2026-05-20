@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { resolveImageUrl, slugify } from '../utils/helpers';
+import { apiFetch } from '../api';
 
-const HomePage = ({ products, categories, caseStudies = [] }) => {
+
+
+const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces = [], collections = [] }) => {
   const [sliderPos, setSliderPos] = useState(50);
   const dummyProducts = [
     { _id: 'd1', name: 'Golden Abstract I', basePrice: 12500, images: ['https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800'] },
@@ -14,9 +17,18 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
   ];
 
   const actualProducts = products && products.length > 0 ? products : dummyProducts;
-  const latestProducts = actualProducts.slice(0, 8);
+  
+  // Dynamically fetch products assigned to 'New Arrivals' collection
+  let newArrivals = actualProducts.filter(p => p.discoverCollection?.name === 'New Arrivals');
+  if (newArrivals.length === 0) {
+    newArrivals = actualProducts.slice(0, 8); // Fallback if no specific new arrivals exist yet
+  }
+  const latestProducts = newArrivals;
+  
   const bestSellersProducts = actualProducts.filter(p => p.isFeatured || p._id.startsWith('d')).slice(0, 4);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [selectedMood, setSelectedMood] = useState(null); // null = All Moods
+  const [selectedCaseStudy, setSelectedCaseStudy] = useState(null);
 
   const defaultCaseStudies = [
     {
@@ -47,7 +59,16 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
     }
   ];
 
-  const actualCaseStudies = caseStudies && caseStudies.length > 0 ? caseStudies : defaultCaseStudies;
+  const allCaseStudies = caseStudies && caseStudies.length > 0 ? caseStudies : defaultCaseStudies;
+
+  // Filter by placement — fallback to defaults if none of that type exist yet
+  const heroCaseStudies = allCaseStudies.filter(c => !c.placement || c.placement === 'hero').length > 0
+    ? allCaseStudies.filter(c => !c.placement || c.placement === 'hero')
+    : defaultCaseStudies;
+  const actualCaseStudies = heroCaseStudies;
+
+  const comparisonStudy = allCaseStudies.find(c => c.placement === 'comparison') || null;
+  const clientWorkStudies = allCaseStudies.filter(c => c.placement === 'client_work');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -55,6 +76,77 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
     }, 6000);
     return () => clearInterval(timer);
   }, [actualCaseStudies.length]);
+
+  // Calculate dynamic collections with API integration
+  const fallbackCollectionImages = [
+    "https://images.unsplash.com/photo-1604871000636-074fa5117945?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800"
+  ];
+
+  const displayCollections = collections && collections.length > 0
+    ? collections.map((col, i) => {
+        const colProducts = actualProducts.filter(p => {
+          const colId = p.discoverCollection?._id || p.discoverCollection;
+          const colName = p.discoverCollection?.name;
+          return colId === col._id || (colName && colName.toLowerCase() === col.name.toLowerCase());
+        });
+        const img = colProducts[0]?.images?.[0]
+          ? resolveImageUrl(colProducts[0].images[0])
+          : fallbackCollectionImages[i % fallbackCollectionImages.length];
+        return {
+          _id: col._id,
+          name: col.name,
+          count: `${colProducts.length} Piece${colProducts.length === 1 ? '' : 's'}`,
+          img
+        };
+      })
+    : [
+        { name: "Spiritual & Vedic", count: "124 Pieces", img: "https://images.unsplash.com/photo-1604871000636-074fa5117945?auto=format&fit=crop&q=80&w=800" },
+        { name: "Abstract Minimalist", count: "89 Pieces", img: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&q=80&w=800" },
+        { name: "Architectural Noir", count: "56 Pieces", img: "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&q=80&w=800" },
+        { name: "Heritage Landscapes", count: "210 Pieces", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800" }
+      ];
+
+  // Trade Form States
+  const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
+  const [tradeFormRole, setTradeFormRole] = useState('');
+  const [tradeFormData, setTradeFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    message: ''
+  });
+  const [tradeSubmitStatus, setTradeSubmitStatus] = useState({ loading: false, success: false, error: null });
+
+  const openTradeModal = (role = '') => {
+    setTradeFormRole(role);
+    setTradeFormData({ name: '', email: '', phone: '', company: '', message: '' });
+    setTradeSubmitStatus({ loading: false, success: false, error: null });
+    setIsTradeModalOpen(true);
+  };
+
+  const handleTradeSubmit = async (e) => {
+    e.preventDefault();
+    setTradeSubmitStatus({ loading: true, success: false, error: null });
+    try {
+      await apiFetch('/trade-applications', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...tradeFormData,
+          role: tradeFormRole || 'Other'
+        })
+      });
+      setTradeSubmitStatus({ loading: false, success: true, error: null });
+      setTimeout(() => {
+        setIsTradeModalOpen(false);
+      }, 2500);
+    } catch (err) {
+      setTradeSubmitStatus({ loading: false, success: false, error: err.message || 'Submission failed' });
+    }
+  };
 
   const [isAIExpanded, setIsAIExpanded] = useState(false);
 
@@ -130,7 +222,7 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
                   <p className="editorial-description">{slideDescription}</p>
                   <div className="editorial-actions">
                     <Link to="/shop" className="editorial-btn">{slide.primaryBtn || 'EXPLORE COLLECTION'}</Link>
-                    <Link to="/shop" className="editorial-btn secondary">{slide.secondaryBtn || 'VIEW SPACE'}</Link>
+                    <button onClick={() => setSelectedCaseStudy(slide)} className="editorial-btn secondary" style={{ border: 'none', background: 'rgba(255,255,255,0.1)', cursor: 'pointer' }}>VIEW CASE STUDY</button>
                   </div>
                 </div>
 
@@ -210,27 +302,36 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
       {/* SECTION 3: Art belongs in every space (ArtCafe Inspired) */}
       <section className="about-luxury-section">
         <div className="about-top-grid">
+          <div className="about-image-collage">
+            <div className="collage-main">
+              <img src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=1200" alt="Luxury Living Room" />
+            </div>
+            <div className="collage-floating">
+              <img src="https://images.unsplash.com/photo-1544457070-4cd773b4d71e?auto=format&fit=crop&q=80&w=600" alt="Detail Art" />
+            </div>
+            <div className="collage-badge">
+              <span className="years">11+</span>
+              <span className="text">Years of<br/>Curating</span>
+            </div>
+          </div>
+
           <div className="about-text-content">
-            <span className="about-tag">ABOUT ARTCAFE</span>
-            <h2>Where Art Meets <br />Legacy</h2>
-            <p>
+            <span className="about-tag">THE ARTCAFE LEGACY</span>
+            <h2>Where Fine Art <br /> <span className="gold-italic">Meets Living</span></h2>
+            <div className="luxury-divider"></div>
+            <p className="lead-text">
               ArtCafe is India's premier platform where you can buy, rent, or
               commission authenticated fine art — from a ₹2,000 archival
-              print to a bespoke commission for a luxury villa. Backed by a
-              decade of curatorial expertise.
+              print to a bespoke masterpiece for a luxury villa.
             </p>
-            <Link to="/shop" className="explore-link">EXPLORE THE COLLECTION &rarr;</Link>
-          </div>
-          <div className="about-image-content">
-            <img src="https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=1200" alt="Luxury Living Room" />
-            <div className="image-badge">
-              <span className="badge-title">OFFICIAL ARCHIVE</span>
-              <span className="badge-desc">ArtCafe Archives, Hyderabad - Est. 2015</span>
-            </div>
+            <p className="sub-text">
+              Backed by over a decade of curatorial expertise, we connect visionaries, collectors, and interior designers with pieces that hold true provenance.
+            </p>
+            <Link to="/about" className="btn-luxury-solid mt-4">DISCOVER OUR STORY</Link>
           </div>
         </div>
 
-        <div className="stats-ticker-bar">
+        <div className="stats-ticker-bar premium">
           <div className="stat-item">
             <h3>1,200+</h3>
             <p>CURATED WORKS</p>
@@ -247,63 +348,106 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
             <h3>100%</h3>
             <p>AUTHENTICATED</p>
           </div>
-          <div className="stat-item">
-            <h3>11+</h3>
-            <p>YEARS CURATING</p>
-          </div>
         </div>
 
-        <div className="service-cards-container container">
-          <div className="service-card">
-            <span className="service-label">OWN IT</span>
-            <h3>Buy original <br />Indian art</h3>
-            <p>Paintings, sculptures, old maps, miniatures, folk art — each piece authenticated and shipped with provenance documentation.</p>
-            <Link to="/shop" className="service-link">BROWSE THE COLLECTION &rarr;</Link>
+        <div className="service-cards-container premium-cards container">
+          <div className="premium-service-card">
+            <div className="bg-image" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=800)' }}></div>
+            <div className="card-content">
+              <span className="service-label">OWN IT</span>
+              <h3>Buy Original <br />Indian Art</h3>
+              <p>Paintings, sculptures, old maps, miniatures — each piece authenticated.</p>
+              <Link to="/shop" className="service-link">BROWSE COLLECTION &rarr;</Link>
+            </div>
           </div>
-          <div className="service-card">
-            <span className="service-label">LIVE WITH IT FIRST</span>
-            <h3>Rent & rotate <br />on your terms</h3>
-            <p>India's first art rental platform. Monthly plans from ₹1,500. Delivered, installed, and swapped by our team whenever you're ready.</p>
-            <Link to="/shop?mode=rent" className="service-link">EXPLORE ART ON RENT &rarr;</Link>
+          <div className="premium-service-card active-card">
+            <div className="bg-image" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=800)' }}></div>
+            <div className="card-content">
+              <span className="service-label">LIVE WITH IT FIRST</span>
+              <h3>Rent & Rotate <br />On Your Terms</h3>
+              <p>India's premier art rental. Delivered, installed, and swapped.</p>
+              <Link to="/rentals" className="service-link">EXPLORE ART ON RENT &rarr;</Link>
+            </div>
           </div>
-          <div className="service-card">
-            <span className="service-label">MADE FOR YOU</span>
-            <h3>Custom Masterpieces</h3>
-            <p>Work with your dedicated ArtCafe advisor to commission a piece built entirely to your space, palette, and vision — from a handpicked artist.</p>
-            <Link to="/architect-program" className="service-link">START A COMMISSION &rarr;</Link>
+          <div className="premium-service-card">
+            <div className="bg-image" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&q=80&w=800)' }}></div>
+            <div className="card-content">
+              <span className="service-label">MADE FOR YOU</span>
+              <h3>Custom <br />Masterpieces</h3>
+              <p>Work with an advisor to commission a piece built to your vision.</p>
+              <Link to="/architect-program" className="service-link">START COMMISSION &rarr;</Link>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* SECTION 4: Art Personality Quiz */}
-      <section className="art-personality-section">
-        <div className="container">
+      {/* SECTION 4: Shop By Mood (Style-driven) */}
+      <section className="mood-section">
+        <div className="mood-section-inner">
           <div className="section-header-luxury centered">
-            <span className="subtitle">ART DNA QUIZ</span>
-            <h2>Discover Your Art Personality</h2>
-            <p className="header-desc">Find the pieces that resonate with your inner curator.</p>
+            <span className="subtitle">SHOP BY MOOD</span>
+            <h2>How do you want to feel?</h2>
+            <p className="header-desc">Let your emotion guide you to the perfect piece.</p>
           </div>
 
-          <div className="quiz-cards-grid">
-            {[
-              { title: "The Founder", img: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=800", tag: "Visionary & Bold" },
-              { title: "The Collector", img: "https://images.pexels.com/photos/20967/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=800", tag: "Eclectic & Refined" },
-              { title: "The Spiritual Soul", img: "https://images.unsplash.com/photo-1574169208507-84376144848b?auto=format&fit=crop&q=80&w=800", tag: "Zen & Meaningful" },
-              { title: "The Minimalist", img: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=800", tag: "Clean & Pure" },
-              { title: "The Luxury Villa Owner", img: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80&w=800", tag: "Grand & Statement" }
-            ].map((persona, idx) => (
-              <Link key={idx} to={`/shop?personality=${slugify(persona.title)}`} className="quiz-card">
-                <div className="quiz-card-image">
-                  <img src={persona.img} alt={persona.title} />
-                  <div className="quiz-overlay"></div>
-                </div>
-                <div className="quiz-content">
-                  <span className="quiz-tag">{persona.tag}</span>
-                  <h3>{persona.title}</h3>
-                  <span className="quiz-cta">REVEAL MY COLLECTION &rarr;</span>
-                </div>
-              </Link>
-            ))}
+          {/* Mood Pills from API styles */}
+          <div className="mood-pills">
+            <button
+              className={`mood-pill ${selectedMood === null ? 'active' : ''}`}
+              onClick={() => setSelectedMood(null)}
+            >
+              <span className="mood-name">All Moods</span>
+            </button>
+            {styles.map(style => {
+              const count = actualProducts.filter(p => p.style?._id === style._id).length;
+              return (
+                <button
+                  key={style._id}
+                  className={`mood-pill ${selectedMood?._id === style._id ? 'active' : ''}`}
+                  onClick={() => setSelectedMood(style)}
+                >
+                  <span className="mood-name">{style.name}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Product Results */}
+          <div className="mood-products-grid" key={selectedMood?._id || 'all'}>
+            {(selectedMood
+              ? actualProducts.filter(p => p.style?._id === selectedMood._id)
+              : actualProducts
+            )
+              .slice(0, 4)
+              .map((p, idx) => (
+                <Link key={`${p._id}-mood-${idx}`} to={`/product/${slugify(p.name)}`} className="mood-product-card">
+                  <div className="mood-product-image">
+                    <img
+                      src={resolveImageUrl(p.images?.[0], p._id)}
+                      alt={p.name}
+                      onError={e => e.target.src = 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800'}
+                    />
+                    <div className="mood-product-overlay">
+                      <span>VIEW PIECE →</span>
+                    </div>
+                  </div>
+                  <div className="mood-product-info">
+                    <h4>{p.name}</h4>
+                    {p.style && <span className="mood-style-tag">{p.style.name}</span>}
+                    <p className="mood-price">₹{p.basePrice?.toLocaleString()}</p>
+                  </div>
+                </Link>
+              ))
+            }
+          </div>
+
+          <div className="mood-cta">
+            <Link
+              to={selectedMood ? `/shop?style=${slugify(selectedMood.name)}` : '/shop'}
+              className="btn-luxury-solid"
+            >
+              {selectedMood ? `EXPLORE ${selectedMood.name.toUpperCase()} ARTWORKS` : 'EXPLORE ALL ARTWORKS'}
+            </Link>
           </div>
         </div>
       </section>
@@ -316,23 +460,42 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
         </div>
 
         <div className="space-grid">
-          {[
-            { name: "Living Room", img: "https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg?auto=compress&cs=tinysrgb&w=800" },
-            { name: "Office", img: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800" },
-            { name: "Villa", img: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80&w=800" },
-            { name: "Temple", img: "https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800" },
-            { name: "Bedroom", img: "https://images.unsplash.com/photo-1560184897-67f4a3f9a7fa?auto=format&fit=crop&q=80&w=800" }
-          ].map((space, idx) => (
-            <Link key={idx} to={`/shop?space=${slugify(space.name)}`} className="space-card">
-              <div className="space-image">
-                <img src={space.img} alt={space.name} />
-                <div className="space-overlay">
-                  <h3>{space.name}</h3>
-                  <span className="space-explore">EXPLORE PIECES</span>
+          {(() => {
+            // Image fallbacks keyed by space name (case-insensitive)
+            const spaceImages = {
+              'living room': 'https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg?auto=compress&cs=tinysrgb&w=800',
+              'office':      'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800',
+              'villa':       'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80&w=800',
+              'temple':      'https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800',
+              'temple / spiritual space': 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800',
+              'bedroom':     'https://images.unsplash.com/photo-1560184897-67f4a3f9a7fa?auto=format&fit=crop&q=80&w=800',
+              'dining':      'https://images.unsplash.com/photo-1617098900591-3f90928e8c54?auto=format&fit=crop&q=80&w=800',
+              'hotel':       'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800',
+              'lobby':       'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?auto=format&fit=crop&q=80&w=800',
+            };
+            const defaultImg = 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=800';
+
+            const spaceList = spaces.length > 0 ? spaces : [
+              { _id: 'lr', name: 'Living Room' }, { _id: 'of', name: 'Office' },
+              { _id: 'vi', name: 'Villa' }, { _id: 'te', name: 'Temple' }, { _id: 'be', name: 'Bedroom' }
+            ];
+
+            return spaceList.map((space, idx) => (
+              <Link key={space._id || idx} to={`/shop?space=${slugify(space.name)}`} className="space-card">
+                <div className="space-image">
+                  <img
+                    src={spaceImages[space.name?.toLowerCase()] || defaultImg}
+                    alt={space.name}
+                    onError={e => e.target.src = defaultImg}
+                  />
+                  <div className="space-overlay">
+                    <h3>{space.name}</h3>
+                    <span className="space-explore">EXPLORE PIECES</span>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ));
+          })()}
         </div>
       </section>
       {/* SECTION 6: Before & After (Draggable Slider) */}
@@ -342,15 +505,23 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
             <div className="transformation-slider-wrapper">
               <div className="comparison-slider-v2">
                 <div className="image-after-v2">
-                  <img src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=1200" alt="After" />
+                  <img
+                    src={comparisonStudy?.afterImage || 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=1200'}
+                    alt="After"
+                    onError={e => e.target.src = 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=1200'}
+                  />
                   <span className="slider-label-v2 after">AFTER ARTCAFE</span>
                 </div>
 
                 <div
                   className="image-before-v2"
-                  style={{ width: `${sliderPos}%` }}
+                  style={{ clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)` }}
                 >
-                  <img src="https://images.unsplash.com/photo-1513161455079-7dc1de15ef3e?auto=format&fit=crop&q=80&w=1200" alt="Before" />
+                  <img
+                    src={comparisonStudy?.beforeImage || 'https://images.unsplash.com/photo-1513161455079-7dc1de15ef3e?auto=format&fit=crop&q=80&w=1200'}
+                    alt="Before"
+                    onError={e => e.target.src = 'https://images.unsplash.com/photo-1513161455079-7dc1de15ef3e?auto=format&fit=crop&q=80&w=1200'}
+                  />
                   <span className="slider-label-v2 before">BEFORE ARTCAFE</span>
                 </div>
 
@@ -375,9 +546,10 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
             </div>
 
             <div className="transformation-content-v2">
-              <span className="subtitle gold">CASE STUDY 01</span>
-              <h2>The Art of Transformation</h2>
-              <p>Witness how a cold, unfinished space becomes a masterpiece of Quiet Luxury. We don't just provide art; we provide the soul of the room.</p>
+              <span className="subtitle gold">CASE STUDY</span>
+              <h2>{comparisonStudy?.title || 'The Art of Transformation'}</h2>
+              <p>{comparisonStudy?.description || "Witness how a cold, unfinished space becomes a masterpiece of Quiet Luxury. We don't just provide art; we provide the soul of the room."}</p>
+              {comparisonStudy?.client && <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginTop: '-10px' }}>{comparisonStudy.client}</p>}
 
               <div className="transformation-stats">
                 <div className="stat">
@@ -390,7 +562,12 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
                 </div>
               </div>
 
-              <Link to="/shop" className="btn-luxury-primary">SHOP THIS LOOK</Link>
+              <div style={{ display: 'flex', gap: '15px', marginTop: '30px' }}>
+                <Link to="/shop" className="btn-luxury-primary">SHOP THIS LOOK</Link>
+                {comparisonStudy && (
+                  <button onClick={() => setSelectedCaseStudy(comparisonStudy)} className="btn-luxury-secondary" style={{ background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '12px 25px', borderRadius: '4px', cursor: 'pointer', letterSpacing: '0.1em', fontSize: '12px', fontWeight: 600 }}>READ CASE STUDY</button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -400,78 +577,101 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
       {/* SECTION 7: Cover Stories (Reels Feel) */}
       <section className="cover-stories-section section ">
         <div className="container">
-          <div className="originals-header">
+          <div className="section-header-luxury centered">
             <span className="subtitle gold">ARTCAFE ORIGINALS</span>
-            <h2>Exclusives You Won't <br />Find Anywhere Else</h2>
+            <h2>Art In Motion</h2>
+            <p className="gray-dark" style={{ maxWidth: '600px', margin: '15px auto 0 auto', color: '#555', fontSize: '15px', lineHeight: '1.6', fontFamily: 'var(--font-main)' }}>
+              Behind the canvas: watch our exclusive creations, painting processes, and design stories come to life.
+            </p>
           </div>
+
 
           <div className="reels-grid">
             {[
               {
                 id: 1,
-                artist: "Elena Rossi",
-                title: "Behind the Brush",
-                video: "https://player.vimeo.com/external/371433846.sd.mp4?s=231da633c7833eba9f30327f9175f3a098485292&profile_id=139&oauth2_token_id=57447761",
+                instagramLink: "https://www.instagram.com/reel/DMp0lI_Jswt/",
+                video: "/videos/reel_1.mp4",
                 poster: "https://images.pexels.com/photos/1148998/pexels-photo-1148998.jpeg?auto=compress&cs=tinysrgb&w=800"
               },
               {
                 id: 2,
-                artist: "Vikram Seth",
-                title: "Texture & Soul",
-                video: "https://player.vimeo.com/external/322364568.sd.mp4?s=338c2045c2f30689930491038a8e100806456f95&profile_id=139&oauth2_token_id=57447761",
+                instagramLink: "https://www.instagram.com/reel/DMffZ43pU-A/",
+                video: "/videos/reel_2.mp4",
                 poster: "https://images.pexels.com/photos/1646953/pexels-photo-1646953.jpeg?auto=compress&cs=tinysrgb&w=800"
               },
               {
                 id: 3,
-                artist: "Saira Khan",
-                title: "The Golden Mandala",
-                video: "https://player.vimeo.com/external/403209961.sd.mp4?s=17316b2a09575971434190f845d07011d87f7396&profile_id=139&oauth2_token_id=57447761",
+                instagramLink: "https://www.instagram.com/reel/DMNgOpoJPOL/",
+                video: "/videos/reel_3.mp4",
                 poster: "https://images.pexels.com/photos/2203051/pexels-photo-2203051.jpeg?auto=compress&cs=tinysrgb&w=800"
               },
               {
                 id: 4,
-                artist: "Julian Voss",
-                title: "Modern Muse",
-                video: "https://player.vimeo.com/external/371433846.sd.mp4?s=231da633c7833eba9f30327f9175f3a098485292&profile_id=139&oauth2_token_id=57447761",
+                instagramLink: "https://www.instagram.com/reel/DMIV_Z6pExY/",
+                video: "/videos/reel_4.mp4",
                 poster: "https://images.pexels.com/photos/1045299/pexels-photo-1045299.jpeg?auto=compress&cs=tinysrgb&w=800"
               },
               {
                 id: 5,
-                artist: "Anya Chen",
-                title: "Abstract Rhythm",
-                video: "https://player.vimeo.com/external/322364568.sd.mp4?s=338c2045c2f30689930491038a8e100806456f95&profile_id=139&oauth2_token_id=57447761",
+                instagramLink: "https://www.instagram.com/reel/DF-QuQSP_j5/",
+                video: "/videos/reel_5.mp4",
                 poster: "https://images.pexels.com/photos/1109354/pexels-photo-1109354.jpeg?auto=compress&cs=tinysrgb&w=800"
+              },
+              {
+                id: 6,
+                instagramLink: "https://www.instagram.com/reel/DByn1FlP7Hr/",
+                video: "/videos/reel_6.mp4",
+                poster: "https://images.pexels.com/photos/1148998/pexels-photo-1148998.jpeg?auto=compress&cs=tinysrgb&w=800"
+              },
+              {
+                id: 7,
+                instagramLink: "https://www.instagram.com/reel/DFxcNo1OfaE/",
+                video: "/videos/reel_7.mp4",
+                poster: "https://images.pexels.com/photos/1646953/pexels-photo-1646953.jpeg?auto=compress&cs=tinysrgb&w=800"
+              },
+              {
+                id: 8,
+                instagramLink: "https://www.instagram.com/reel/DA04EkzC-EQ/",
+                video: "/videos/reel_8.mp4",
+                poster: "https://images.pexels.com/photos/2203051/pexels-photo-2203051.jpeg?auto=compress&cs=tinysrgb&w=800"
+              },
+              {
+                id: 9,
+                instagramLink: "https://www.instagram.com/reel/C9y7Mk8tJnU/",
+                video: "/videos/reel_9.mp4",
+                poster: "https://images.pexels.com/photos/1045299/pexels-photo-1045299.jpeg?auto=compress&cs=tinysrgb&w=800"
               }
             ].map((story) => (
-              <div key={story.id} className="reel-card">
+              <a
+                key={story.id}
+                href={story.instagramLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="reel-card"
+                style={{ display: 'block' }}
+              >
                 <div className="reel-video-wrapper">
                   <video
-                    src={story.video}
-                    poster={story.poster}
                     muted
                     loop
                     autoPlay
                     playsInline
-                  />
-                  <div className="reel-overlay">
-                    <div className="reel-content">
-                      <span className="artist-tag">@{story.artist.replace(' ', '').toLowerCase()}</span>
-                      <h4>{story.title}</h4>
-                      <div className="reel-actions">
-                        <button className="btn-reel-play">WATCH</button>
-                        <button className="btn-reel-shop">SHOP ARTIST</button>
-                      </div>
-                    </div>
-                  </div>
+                    preload="auto"
+                    poster={story.poster}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  >
+                    <source src={story.video} type="video/mp4" />
+                  </video>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>
       </section>
 
 
-      {/* SECTION 8: See It In Your Space (Interactive Preview) */}
+      {/* SECTION 8: See It In Your Space (Interactive Preview) - HIDDEN FOR NOW
       <section className="see-in-space-section section">
         <div className="container">
           <div className="space-preview-layout">
@@ -527,6 +727,7 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
           </div>
         </div>
       </section>
+      */}
 
 
       {/* SECTION 9: Luxury Homes Styled By Us (Social Proof) */}
@@ -539,42 +740,86 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
           </div>
 
           <div className="projects-masonry">
-            <div className="project-card large">
-              <div className="project-image">
-                <img src="https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="The Obsidian Villa" />
-                <div className="project-overlay">
-                  <div className="project-info">
-                    <h3>The Obsidian Villa</h3>
-                    <p>Bali, Indonesia • Architect: Studio Kura</p>
-                    <span className="project-tag">VILLA INSTALL</span>
+            {/* LARGE CARD */}
+            {(() => {
+              const project = clientWorkStudies[0] || {
+                title: "The Obsidian Villa",
+                client: "Bali, Indonesia",
+                tags: ["VILLA INSTALL"],
+                featuredImage: "https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1200"
+              };
+              return (
+                <div className="project-card large" style={{ cursor: 'pointer' }} onClick={() => setSelectedCaseStudy(project)}>
+                  <div className="project-image">
+                    <img 
+                      src={resolveImageUrl(project.featuredImage)} 
+                      alt={project.title} 
+                      onError={e => e.target.src = "https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1200"}
+                    />
+                    <div className="project-overlay">
+                      <div className="project-info">
+                        <h3>{project.title}</h3>
+                        <p>{project.client} {project.tags?.[1] ? `• ${project.tags[1]}` : ''}</p>
+                        <span className="project-tag">{project.tags?.[0] || 'CASE STUDY'}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
             <div className="projects-side-grid">
-              <div className="project-card small">
-                <div className="project-image">
-                  <img src="https://images.pexels.com/photos/2724749/pexels-photo-2724749.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Penthouse Suite" />
-                  <div className="project-overlay">
-                    <div className="project-info">
-                      <h3>Skyline Penthouse</h3>
-                      <p>Dubai, UAE</p>
+              {/* SMALL CARD 1 */}
+              {(() => {
+                const project = clientWorkStudies[1] || {
+                  title: "Skyline Penthouse",
+                  client: "Dubai, UAE",
+                  featuredImage: "https://images.pexels.com/photos/2724749/pexels-photo-2724749.jpeg?auto=compress&cs=tinysrgb&w=800"
+                };
+                return (
+                  <div className="project-card small" style={{ cursor: 'pointer' }} onClick={() => setSelectedCaseStudy(project)}>
+                    <div className="project-image">
+                      <img 
+                        src={resolveImageUrl(project.featuredImage)} 
+                        alt={project.title} 
+                        onError={e => e.target.src = "https://images.pexels.com/photos/2724749/pexels-photo-2724749.jpeg?auto=compress&cs=tinysrgb&w=800"}
+                      />
+                      <div className="project-overlay">
+                        <div className="project-info">
+                          <h3>{project.title}</h3>
+                          <p>{project.client}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-              <div className="project-card small">
-                <div className="project-image">
-                  <img src="https://images.pexels.com/photos/1125130/pexels-photo-1125130.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Architectural Loft" />
-                  <div className="project-overlay">
-                    <div className="project-info">
-                      <h3>The Concrete Loft</h3>
-                      <p>Berlin, Germany</p>
+                );
+              })()}
+
+              {/* SMALL CARD 2 */}
+              {(() => {
+                const project = clientWorkStudies[2] || {
+                  title: "The Concrete Loft",
+                  client: "Berlin, Germany",
+                  featuredImage: "https://images.pexels.com/photos/1125130/pexels-photo-1125130.jpeg?auto=compress&cs=tinysrgb&w=800"
+                };
+                return (
+                  <div className="project-card small" style={{ cursor: 'pointer' }} onClick={() => setSelectedCaseStudy(project)}>
+                    <div className="project-image">
+                      <img 
+                        src={resolveImageUrl(project.featuredImage)} 
+                        alt={project.title} 
+                        onError={e => e.target.src = "https://images.pexels.com/photos/1125130/pexels-photo-1125130.jpeg?auto=compress&cs=tinysrgb&w=800"}
+                      />
+                      <div className="project-overlay">
+                        <div className="project-info">
+                          <h3>{project.title}</h3>
+                          <p>{project.client}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -588,48 +833,41 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
         </div>
       </section>
 
-      {/* SECTION 10: Video Testimonials (Living Testimonials) */}
+      {/* SECTION 10: Living Testimonials (Minimalist Text-Based) */}
       <section className="video-testimonials-section section">
         <div className="container">
-          <div className="section-header-luxury centered">
+          <div className="section-header-luxury centered" style={{ marginBottom: '40px' }}>
             <span className="subtitle gold">CLIENT STORIES</span>
             <h2>Living Testimonials</h2>
           </div>
 
-          <div className="testimonials-video-grid">
+          <div className="testimonials-text-grid">
             {[
               {
                 id: 1,
-                client: "Sarah J. Penthouses",
-                video: "https://player.vimeo.com/external/371433846.sd.mp4?s=231da633c7833eba9f30327f9175f3a098485292&profile_id=139&oauth2_token_id=57447761",
-                quote: "The way the light hits the 'Obsidian' piece in my living room is transformative.",
-                image: "https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=800"
+                client: "Sarah J.",
+                location: "Penthouse Owner, Mumbai",
+                quote: "The scale and texture of our custom ArtCafe installation completely redefined our living room. It's the first thing guests comment on."
               },
               {
                 id: 2,
                 client: "Architect Marcus V.",
-                video: "https://player.vimeo.com/external/322364568.sd.mp4?s=338c2045c2f30689930491038a8e100806456f95&profile_id=139&oauth2_token_id=57447761",
-                quote: "I recommend ArtCafe to every client who values authenticity and scale.",
-                image: "https://images.pexels.com/photos/1125130/pexels-photo-1125130.jpeg?auto=compress&cs=tinysrgb&w=800"
+                location: "Principal, Studio V",
+                quote: "I recommend ArtCafe to clients who value museum-grade scale and authenticity. Their curation process is unmatched in the industry."
               },
               {
                 id: 3,
-                client: "The Villa Collection",
-                video: "https://player.vimeo.com/external/403209961.sd.mp4?s=17316b2a09575971434190f845d07011d87f7396&profile_id=139&oauth2_token_id=57447761",
-                quote: "Beyond art, it's an investment in the soul of the home.",
-                image: "https://images.pexels.com/photos/2724749/pexels-photo-2724749.jpeg?auto=compress&cs=tinysrgb&w=800"
+                client: "Elena & David R.",
+                location: "The Villa Collection",
+                quote: "More than just art, purchasing these pieces felt like an investment in the soul and atmosphere of our home. Absolutely stunning."
               }
             ].map((testi) => (
-              <div key={testi.id} className="testimonial-video-card">
-                <div className="video-container-luxury">
-                  <video autoPlay muted loop playsInline poster={testi.image}>
-                    <source src={testi.video} type="video/mp4" />
-                  </video>
-                  <div className="video-scrim"></div>
-                  <div className="quote-overlay">
-                    <p>"{testi.quote}"</p>
-                    <span className="client-name">{testi.client}</span>
-                  </div>
+              <div key={testi.id} className="testimonial-text-card">
+                <span className="testimonial-quote-icon">“</span>
+                <p className="testimonial-quote-text">"{testi.quote}"</p>
+                <div className="testimonial-client-info">
+                  <span className="testimonial-client-name">{testi.client}</span>
+                  <span className="testimonial-client-sub">{testi.location}</span>
                 </div>
               </div>
             ))}
@@ -646,20 +884,15 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
             <h2 className="luxury-title-main">Curated Collections</h2>
           </div>
           <div className="categories-grid-luxury">
-            {[
-              { name: "Spiritual & Vedic", count: "124 Pieces", img: "https://images.unsplash.com/photo-1604871000636-074fa5117945?auto=format&fit=crop&q=80&w=800" },
-              { name: "Abstract Minimalist", count: "89 Pieces", img: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&q=80&w=800" },
-              { name: "Architectural Noir", count: "56 Pieces", img: "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&q=80&w=800" },
-              { name: "Heritage Landscapes", count: "210 Pieces", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800" }
-            ].map((cat, i) => (
-              <div key={i} className="category-card-luxury">
+            {displayCollections.map((cat, i) => (
+              <Link key={cat._id || i} to={`/shop?collection=${slugify(cat.name)}`} className="category-card-luxury" style={{ display: 'block', textDecoration: 'none' }}>
                 <img src={cat.img} alt={cat.name} />
                 <div className="cat-overlay">
                   <h3>{cat.name}</h3>
                   <span>{cat.count}</span>
                   <button className="view-cat">EXPLORE COLLECTION</button>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -679,24 +912,28 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
             {[
               {
                 title: "Interior Designers",
+                role: "Interior Designer",
                 desc: "Tearsheets, scale mock-ups, framing coordination — your advisor sources art room by room to match your client brief exactly.",
                 tag: "TRADE",
                 image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80&w=800"
               },
               {
                 title: "Architects",
+                role: "Architect",
                 desc: "Lobby installations, site-specific murals, custom fabrication — we coordinate artist, fabricator, and install within your project timeline.",
                 tag: "TRADE",
                 image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800"
               },
               {
                 title: "Real Estate Developers",
+                role: "Real Estate Developer",
                 desc: "Complete art programmes for residential towers and commercial projects — from show-flat hero pieces to full building collections.",
                 tag: "TRADE",
                 image: "https://images.unsplash.com/photo-1486325212027-8081e485255e?auto=format&fit=crop&q=80&w=800"
               },
               {
                 title: "Art Consultants",
+                role: "Art Consultant",
                 desc: "Use ArtCafe as your sourcing engine. Full archive access, provenance documentation, and discreet white-label fulfilment for your clients.",
                 tag: "TRADE",
                 image: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800"
@@ -710,7 +947,13 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
                   <span className="trade-tag">{card.tag}</span>
                   <h3>{card.title}</h3>
                   <p>{card.desc}</p>
-                  <a href="#" className="trade-link">REGISTER FOR TRADE →</a>
+                  <button 
+                    onClick={() => openTradeModal(card.role)} 
+                    className="trade-link"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'none', display: 'inline-block' }}
+                  >
+                    REGISTER FOR TRADE →
+                  </button>
                 </div>
               </div>
             ))}
@@ -730,7 +973,13 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
             </div>
             <div className="logo-footer">
               <p>Art enhances every workspace — let us curate yours.</p>
-              <a href="#" className="join-trade">JOIN THE TRADE PROGRAMME →</a>
+              <button 
+                onClick={() => openTradeModal('Other')} 
+                className="join-trade" 
+                style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-block' }}
+              >
+                JOIN THE TRADE PROGRAMME →
+              </button>
             </div>
           </div>
         </div>
@@ -917,6 +1166,259 @@ const HomePage = ({ products, categories, caseStudies = [] }) => {
           </div>
         </div>
       </section>
+
+      {/* CASE STUDY DETAILS MODAL */}
+      {selectedCaseStudy && (
+        <div className="luxury-modal-overlay" onClick={() => setSelectedCaseStudy(null)}>
+          <div className="luxury-modal-content" onClick={e => e.stopPropagation()}>
+            <button className="close-modal-btn" onClick={() => setSelectedCaseStudy(null)}>×</button>
+            <div className="modal-body-scroll">
+              <div className="modal-hero-banner" style={{ backgroundImage: `url(${resolveImageUrl(selectedCaseStudy.featuredImage || selectedCaseStudy.afterImage || selectedCaseStudy.image)})` }}>
+                <div className="banner-scrim"></div>
+                <div className="banner-text">
+                  <span className="modal-tag">{selectedCaseStudy.tags?.[0] || 'CASE STUDY'}</span>
+                  <h2>{selectedCaseStudy.title}</h2>
+                  {selectedCaseStudy.client && <span className="modal-client">{selectedCaseStudy.client}</span>}
+                </div>
+              </div>
+              <div className="modal-story-content">
+                {selectedCaseStudy.description && (
+                  <p className="modal-excerpt">{selectedCaseStudy.description}</p>
+                )}
+                {selectedCaseStudy.content ? (
+                  <div className="modal-rich-text" dangerouslySetInnerHTML={{ __html: selectedCaseStudy.content }} />
+                ) : (
+                  <div className="modal-rich-text">
+                    <p>No additional details provided. Browse our galleries to find exclusive items matching this style.</p>
+                  </div>
+                )}
+                {selectedCaseStudy.tags && selectedCaseStudy.tags.length > 0 && (
+                  <div className="modal-tags-list">
+                    {selectedCaseStudy.tags.map(t => (
+                      <span key={t} className="modal-tag-pill">{t}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <style>{`
+            .luxury-modal-overlay {
+              position: fixed;
+              inset: 0;
+              background: rgba(0, 0, 0, 0.85);
+              backdrop-filter: blur(15px);
+              z-index: 10000;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 20px;
+              animation: fadeIn 0.4s ease;
+            }
+            .luxury-modal-content {
+              background: #111;
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              border-radius: 12px;
+              width: 100%;
+              max-width: 850px;
+              max-height: 85vh;
+              overflow: hidden;
+              position: relative;
+              box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8);
+              animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            .close-modal-btn {
+              position: absolute;
+              top: 20px;
+              right: 20px;
+              background: rgba(0, 0, 0, 0.6);
+              border: 1px solid rgba(255, 255, 255, 0.2);
+              color: #fff;
+              font-size: 24px;
+              width: 44px;
+              height: 44px;
+              border-radius: 50%;
+              cursor: pointer;
+              z-index: 10;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: all 0.3s ease;
+            }
+            .close-modal-btn:hover {
+              background: #fff;
+              color: #000;
+              border-color: #fff;
+            }
+            .modal-body-scroll {
+              max-height: 85vh;
+              overflow-y: auto;
+            }
+            .modal-hero-banner {
+              height: 350px;
+              background-size: cover;
+              background-position: center;
+              position: relative;
+              display: flex;
+              align-items: flex-end;
+              padding: 40px;
+            }
+            .banner-scrim {
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(to top, #111 0%, rgba(17, 17, 17, 0.4) 70%, transparent 100%);
+            }
+            .banner-text {
+              position: relative;
+              z-index: 2;
+              max-width: 600px;
+            }
+            .modal-tag {
+              font-size: 10px;
+              letter-spacing: 0.2em;
+              color: #d4af37;
+              text-transform: uppercase;
+              font-weight: 700;
+              display: block;
+              margin-bottom: 10px;
+            }
+            .banner-text h2 {
+              font-size: 2.2rem;
+              font-weight: 300;
+              color: #fff;
+              margin: 0 0 10px 0;
+              line-height: 1.2;
+            }
+            .modal-client {
+              font-size: 13px;
+              color: rgba(255, 255, 255, 0.6);
+              letter-spacing: 0.05em;
+            }
+            .modal-story-content {
+              padding: 40px;
+            }
+            .modal-excerpt {
+              font-size: 1.1rem;
+              line-height: 1.6;
+              color: #ddd;
+              font-weight: 300;
+              margin-bottom: 30px;
+              border-left: 3px solid #d4af37;
+              padding-left: 20px;
+            }
+            .modal-rich-text {
+              font-size: 1rem;
+              line-height: 1.8;
+              color: #aaa;
+            }
+            .modal-rich-text p {
+              margin-bottom: 20px;
+            }
+            .modal-tags-list {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 10px;
+              margin-top: 40px;
+              border-top: 1px solid rgba(255, 255, 255, 0.05);
+              padding-top: 20px;
+            }
+            .modal-tag-pill {
+              font-size: 11px;
+              background: rgba(255, 255, 255, 0.05);
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              padding: 6px 14px;
+              border-radius: 20px;
+              color: #ccc;
+            }
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes slideUp {
+              from { transform: translateY(30px); opacity: 0; }
+              to { transform: translateY(0); opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* TRADE APPLICATION MODAL */}
+      {isTradeModalOpen && (
+        <div className="luxury-modal-overlay" onClick={() => setIsTradeModalOpen(false)}>
+          <div className="luxury-modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={() => setIsTradeModalOpen(false)}>&times;</button>
+            
+            {tradeSubmitStatus.success ? (
+              <div className="modal-success-state">
+                <div className="success-checkmark">&#10003;</div>
+                <h3>Application Received</h3>
+                <p>Thank you for applying. A dedicated trade advisor will review your credentials and contact you within 24 hours.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleTradeSubmit} className="trade-application-form">
+                <h2>Join as {tradeFormRole || 'Trade'} Partner</h2>
+                <p className="form-subtitle">Access exclusive trade pricing, custom curation services, and high-resolution tearsheets.</p>
+
+                {tradeSubmitStatus.error && (
+                  <div className="form-error-banner">{tradeSubmitStatus.error}</div>
+                )}
+
+                <div className="form-group-luxury">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Full Name"
+                    value={tradeFormData.name}
+                    onChange={(e) => setTradeFormData({ ...tradeFormData, name: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group-luxury">
+                  <input
+                    type="email"
+                    required
+                    placeholder="Email Address"
+                    value={tradeFormData.email}
+                    onChange={(e) => setTradeFormData({ ...tradeFormData, email: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group-luxury">
+                  <input
+                    type="tel"
+                    required
+                    placeholder="Phone Number"
+                    value={tradeFormData.phone}
+                    onChange={(e) => setTradeFormData({ ...tradeFormData, phone: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group-luxury">
+                  <input
+                    type="text"
+                    placeholder="Company / Firm Name"
+                    value={tradeFormData.company}
+                    onChange={(e) => setTradeFormData({ ...tradeFormData, company: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group-luxury">
+                  <textarea
+                    rows="4"
+                    placeholder="Tell us about your upcoming project needs..."
+                    value={tradeFormData.message}
+                    onChange={(e) => setTradeFormData({ ...tradeFormData, message: e.target.value })}
+                  ></textarea>
+                </div>
+
+                <button type="submit" className="submit-trade-btn" disabled={tradeSubmitStatus.loading}>
+                  {tradeSubmitStatus.loading ? 'SUBMITTING...' : 'SUBMIT APPLICATION'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

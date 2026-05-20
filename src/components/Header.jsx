@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { slugify, resolveImageUrl } from '../utils/helpers';
 
-const Header = ({ isScrolled, showSearch, setShowSearch, searchQuery, setSearchQuery, searchResults, openCart, cartCount, openAuth, openDash, user, onLogout, categories = [], spaces = [], styles = [] }) => {
+const Header = ({ isScrolled, showSearch, setShowSearch, searchQuery, setSearchQuery, searchResults, openCart, cartCount, openAuth, openDash, user, onLogout, categories = [], spaces = [], styles = [], collections = [] }) => {
   const [activeDropdown, setActiveDropdown] = useState(null);
 
-  const discoverArtNames = [
+  const fallbackCollectionNames = [
     'New Arrivals',
     'Curated Collections',
     'Best Sellers',
@@ -16,17 +16,10 @@ const Header = ({ isScrolled, showSearch, setShowSearch, searchQuery, setSearchQ
     'Founder Picks'
   ];
 
-  // Filter Categories to only show "Discover Art" categories (type: 'product', no parent category)
-  const discoverArtCategories = categories.filter(c => 
-    c.type === 'product' && 
-    !c.parentCategory && 
-    (discoverArtNames.includes(c.name) || categories.length <= 15)
-  ).sort((a, b) => (a.displayOrder || 99) - (b.displayOrder || 99));
-
-  // If there are no seeded categories, fallback to the hardcoded list
-  const discoverArtList = discoverArtCategories.length > 0 
-    ? discoverArtCategories.map(c => c.name) 
-    : discoverArtNames;
+  // Collections list
+  const collectionList = collections.length > 0 
+    ? collections.map(c => c.name) 
+    : fallbackCollectionNames;
 
   // Spaces list
   const spaceList = spaces.length > 0 
@@ -44,27 +37,34 @@ const Header = ({ isScrolled, showSearch, setShowSearch, searchQuery, setSearchQ
 
   const navItems = [
     {
-      label: 'Discover Art',
-      dropdown: discoverArtList
+      label: 'Collections',
+      dropdown: collectionList,
+      queryParam: 'collection'
     },
     {
       label: 'Shop by Space',
-      dropdown: spaceList
+      dropdown: spaceList,
+      queryParam: 'space'
     },
     {
       label: 'Shop by Style',
-      dropdown: styleList
+      dropdown: styleList,
+      queryParam: 'style'
     },
     {
       label: 'Artists',
-      dropdown: ['Artist cover stories', 'Profiles', 'Interviews', 'Collections']
+      dropdown: ['Artist cover stories', 'Profiles', 'Interviews', 'Collections'],
+      queryParam: 'artist'
     }
   ];
 
   return (
     <header className={`header-luxury `}>
-      <div className="header-top-bar">
-        <p>Complementary Virtual Art Consultation for Architects & Interior Designers</p>
+      <div className="header-top-bar" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', padding: '8px 20px' }}>
+        <p style={{ margin: 0 }}>Complementary Virtual Art Consultation for Architects & Interior Designers</p>
+        <Link to="/architect-program" className="nav-link-luxury trade-cta" style={{ fontSize: '0.75rem', padding: '4px 10px', height: 'auto', background: 'transparent', border: '1px solid #d4af37', color: '#d4af37' }}>
+          <span className="trade-badge" style={{ background: '#d4af37', color: '#000' }}>PRO</span> Architect Program
+        </Link>
       </div>
       <div className="header-inner">
         <div className="nav-left desktop-only" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '25px', minWidth: 0 }}>
@@ -82,7 +82,7 @@ const Header = ({ isScrolled, showSearch, setShowSearch, searchQuery, setSearchQ
               <div className={`luxury-dropdown ${activeDropdown === item.label ? 'active' : ''}`}>
                 <div className="dropdown-grid">
                   {item.dropdown.map((sub, sidx) => (
-                    <Link key={sidx} to={`/shop?${slugify(item.label)}=${slugify(sub)}`} className="dropdown-link">
+                    <Link key={sidx} to={`/shop?${item.queryParam}=${slugify(sub)}`} className="dropdown-link">
                       {sub}
                     </Link>
                   ))}
@@ -99,9 +99,7 @@ const Header = ({ isScrolled, showSearch, setShowSearch, searchQuery, setSearchQ
 
         <div className="header-col-right" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '30px', justifyContent: 'flex-end', minWidth: 0 }}>
           <div className="nav-right desktop-only" style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: '25px' }}>
-            <Link to="/architect-program" className="nav-link-luxury trade-cta">
-              <span className="trade-badge">PRO</span> Architect Program
-            </Link>
+            <Link to="/rentals" className="nav-link-luxury" style={{ color: '#d4af37', fontWeight: 600, borderBottom: '1.5px solid #d4af37', paddingBottom: '2px' }}>Rent Artwork</Link>
             <Link to="/about" className="nav-link-luxury">About</Link>
             <div
               className="nav-item-wrapper"

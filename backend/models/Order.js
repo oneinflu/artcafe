@@ -42,6 +42,20 @@ const OrderSchema = new mongoose.Schema({
     paymentId: String,
     signature: String
   },
+  orderType: { type: String, enum: ['purchase', 'rental'], default: 'purchase' },
+  rentalDetails: {
+    startDate: Date,
+    endDate: Date,
+    durationMonths: Number,
+    depositAmount: Number,
+    monthlyRent: Number,
+    status: {
+      type: String,
+      enum: ['active', 'return_requested', 'quality_check', 'refund_initiated', 'completed', 'defaulted'],
+      default: 'active'
+    },
+    qualityCheckNotes: String
+  },
   createdAt: { type: Date, default: Date.now }
 });
 

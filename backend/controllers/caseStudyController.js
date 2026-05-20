@@ -22,9 +22,12 @@ exports.getCaseStudyBySlug = async (req, res) => {
 exports.createCaseStudy = async (req, res) => {
   try {
     const data = { ...req.body };
-    // Handle featured image from cloudinary if uploaded
-    if (req.file) {
-      data.featuredImage = req.file.path;
+    
+    // Handle multiple uploaded files
+    if (req.files) {
+      if (req.files.featuredImage?.[0]) data.featuredImage = req.files.featuredImage[0].path;
+      if (req.files.beforeImage?.[0]) data.beforeImage = req.files.beforeImage[0].path;
+      if (req.files.afterImage?.[0]) data.afterImage = req.files.afterImage[0].path;
     }
     
     // Auto-generate slug if not provided
@@ -48,8 +51,12 @@ exports.createCaseStudy = async (req, res) => {
 exports.updateCaseStudy = async (req, res) => {
   try {
     const data = { ...req.body };
-    if (req.file) {
-      data.featuredImage = req.file.path;
+    
+    // Handle multiple uploaded files
+    if (req.files) {
+      if (req.files.featuredImage?.[0]) data.featuredImage = req.files.featuredImage[0].path;
+      if (req.files.beforeImage?.[0]) data.beforeImage = req.files.beforeImage[0].path;
+      if (req.files.afterImage?.[0]) data.afterImage = req.files.afterImage[0].path;
     }
 
     if (data.tags && typeof data.tags === 'string') {

@@ -6,6 +6,9 @@ const auth = require('../middleware/auth');
 // @route   GET api/orders
 router.get('/', auth('admin'), orderController.getOrders);
 
+router.get('/rentals', auth('admin'), orderController.getRentalOrders);
+router.put('/rentals/:id/status', auth('admin'), orderController.updateRentalStatus);
+
 // @route   PUT api/orders/:id
 router.put('/:id', auth('admin'), orderController.updateOrderStatus);
 

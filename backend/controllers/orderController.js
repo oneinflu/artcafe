@@ -127,3 +127,36 @@ exports.createShipment = async (req, res) => {
     res.status(500).json({ msg: 'Shiprocket error', error: err.message });
   }
 };
+
+exports.getRentalOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ orderType: 'rental' })
+      .populate('customer', 'name email')
+      .populate('items.product')
+      .sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).send('Server error');
+  }
+};
+
+exports.updateRentalStatus = async (req, res) => {
+  try {
+    const { status, qualityCheckNotes } = req.body;
+    
+    // We update the embedded rentalDetails object
+    const updatePayload = {};
+    if (status) updatePayload['rentalDetails.status'] = status;
+    if (qualityCheckNotes !== undefined) updatePayload['rentalDetails.qualityCheckNotes'] = qualityCheckNotes;
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { $set: updatePayload },
+      { new: true }
+    ).populate('customer', 'name email').populate('items.product');
+    
+    res.json(order);
+  } catch (err) {
+    res.status(500).send('Server error');
+  }
+};

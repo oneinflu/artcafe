@@ -9,13 +9,16 @@ const AdminSidebar = () => {
     { name: 'Dashboard', path: '/admin', icon: '📊' },
     { name: 'Inventory', path: '/admin/inventory', icon: '📦' },
     { name: 'Exclusive Pro', path: '/admin/exclusive', icon: '💎' },
+    { name: 'Rental Products', path: '/admin/rentals', icon: '🔑' },
     { name: 'Categories', path: '/admin/categories', icon: '📁' },
     { name: 'Spaces', path: '/admin/spaces', icon: '🛋️' },
     { name: 'Styles', path: '/admin/styles', icon: '✨' },
     { name: 'Collections', path: '/admin/collections', icon: '✦' },
     { name: 'Attributes', path: '/admin/attributes', icon: '⚙️' },
     { name: 'Orders', path: '/admin/orders', icon: '🛒' },
+    { name: 'Active Rentals', path: '/admin/active-rentals', icon: '🔄' },
     { name: 'Bulk Requests', path: '/admin/bulk-requests', icon: '📋' },
+    { name: 'Trade Program', path: '/admin/trade-applications', icon: '🏛️' },
     { name: 'Pricing Sim', path: '/admin/pricing-simulator', icon: '🧮' },
   ];
 
