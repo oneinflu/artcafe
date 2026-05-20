@@ -19,6 +19,12 @@ const AdminSidebar = () => {
     { name: 'Pricing Sim', path: '/admin/pricing-simulator', icon: '🧮' },
   ];
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/admin/login';
+  };
+
   return (
     <aside className="admin-sidebar">
       <div className="admin-logo">
@@ -85,8 +91,28 @@ const AdminSidebar = () => {
           <span className="text">Architects</span>
         </Link>
       </nav>
-      <div className="admin-footer">
+      <div className="admin-footer" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <Link to="/" className="back-to-store">Back to Store</Link>
+        <button 
+          onClick={handleLogout}
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#fff',
+            padding: '8px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            textAlign: 'center',
+            fontSize: '0.85rem',
+            width: '100%',
+            fontWeight: '600',
+            transition: 'background 0.2s'
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+        >
+          Logout 🚪
+        </button>
       </div>
     </aside>
   );
