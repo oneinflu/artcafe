@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { resolveImageUrl } from '../../utils/helpers';
-import { apiFetch } from '../../api';
+import BASE_URL, { apiFetch } from '../../api';
 import BulkUpload from '../components/BulkUpload';
 
 const ExclusiveProducts = () => {
@@ -206,7 +206,7 @@ const ExclusiveProducts = () => {
 
   const handleDownloadTemplate = async () => {
     try {
-      const response = await fetch('http://localhost:5005/api/products/template', {
+      const response = await fetch(`${BASE_URL}/products/template`, {
         headers: {
           'x-auth-token': localStorage.getItem('token')
         }

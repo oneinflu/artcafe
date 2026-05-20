@@ -1,4 +1,6 @@
-const BASE_URL = 'http://localhost:5005/api';
+const BASE_URL = window.location.origin.includes('localhost')
+  ? 'http://localhost:5005/api'
+  : '/api';
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');
