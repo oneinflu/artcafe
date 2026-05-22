@@ -179,13 +179,25 @@ exports.bulkUploadProducts = async (req, res) => {
     return res.status(400).send('No file uploaded');
   }
   const results = [];
+  const seenHeaders = new Map();
   fs.createReadStream(req.file.path)
-    .pipe(csv({ mapHeaders: ({ header }) => header.trim() }))
+    .pipe(csv({
+      mapHeaders: ({ header }) => {
+        const clean = String(header || '').trim();
+        const count = seenHeaders.get(clean) || 0;
+        seenHeaders.set(clean, count + 1);
+        return count === 0 ? clean : `${clean}__${count + 1}`;
+      }
+    }))
     .on('data', (data) => {
       // Normalize row keys to lowercase for easier matching
       const normalizedRow = {};
+      normalizedRow._canon = {};
       Object.keys(data).forEach(key => {
-        normalizedRow[key.trim().toLowerCase()] = data[key];
+        const lowered = key.trim().toLowerCase();
+        normalizedRow[lowered] = data[key];
+        const canon = lowered.replace(/[^a-z0-9]/g, '');
+        normalizedRow._canon[canon] = data[key];
       });
       // Store original keys too for [Attr] matching
       normalizedRow._original = data;
@@ -195,10 +207,20 @@ exports.bulkUploadProducts = async (req, res) => {
       try {
         let successCount = 0;
         for (const row of results) {
+          const canon = row._canon || {};
           const name = row.name || row.title || row.product;
           const basePrice = row.baseprice || row.price || row.mrp;
           
           if (!name || !basePrice) continue;
+
+          const toNumber = (value) => {
+            if (value === undefined || value === null) return undefined;
+            const raw = String(value).trim();
+            if (!raw) return undefined;
+            const cleaned = raw.replace(/[^0-9.]/g, '');
+            const num = parseFloat(cleaned);
+            return Number.isFinite(num) ? num : undefined;
+          };
 
           // Find or Create Category & Subcategory
           const subCatName = row.subcategory || row.sub_category;
@@ -348,7 +370,26 @@ exports.bulkUploadProducts = async (req, res) => {
             })(),
             images,
             attributes,
-            artist: artistDoc?._id
+            artist: artistDoc?._id,
+
+            hsnCode: String(canon.hsncode || '').trim() || undefined,
+            gst: String(canon.gst || '').trim() || undefined,
+            specifications: row.specifications || undefined,
+            width: row.width || undefined,
+            height: row.height || undefined,
+            depth: row.depth || undefined,
+            artworkPrice,
+            framing: row.framing || undefined,
+            year: row.year || undefined,
+            edition: row.edition || undefined,
+            provenance: row.provenance || undefined,
+            medium: row.medium || undefined,
+            blogId: String(canon.blogid || '').trim() || undefined,
+            dispatchWithin: String(canon.dispatchwithin || '').trim() || undefined,
+            mrpPrice,
+            mrpDiscount: String(canon.mrpdiscount || '').trim() || undefined,
+            corporateDiscount: String(canon.corporatediscount || '').trim() || undefined,
+            architectDiscount: String(canon.architectdiscount || '').trim() || undefined
           }, { upsert: true, new: true, setDefaultsOnInsert: true });
           successCount++;
         }
@@ -386,13 +427,34 @@ exports.getTemplate = async (req, res) => {
       'DisplayOrder',
       'IsExclusive',
       'IsCustomizationAvailable',
-      'Images'
+      'Images',
     ];
 
     // Add dynamic Attribute Headers
     attributeGroups.forEach(group => {
       headers.push(`[Attr] ${group.name}`);
     });
+
+    headers = headers.concat([
+      'HSNCode',
+      'GST',
+      'Specifications',
+      'Width',
+      'Height',
+      'Depth',
+      'ArtworkPrice',
+      'Framing',
+      'Year',
+      'Edition',
+      'Provenance',
+      'Medium',
+      'BlogId',
+      'Dispatch within:',
+      'MRP Price',
+      'MRP Discount',
+      'Corporate Discount',
+      'Architect Discount'
+    ]);
 
     // Create a robust example row
     const exampleData = {
@@ -411,7 +473,25 @@ exports.getTemplate = async (req, res) => {
       'DisplayOrder': '1',
       'IsExclusive': 'false',
       'IsCustomizationAvailable': 'true',
-      'Images': 'https://example.com/img1.jpg|https://example.com/img2.jpg'
+      'Images': 'https://example.com/img1.jpg|https://example.com/img2.jpg',
+      'HSNCode': '4411',
+      'GST': '5%',
+      'Specifications': 'Archival paper + archival inks',
+      'Width': '300 mm - 11.81 inches',
+      'Height': '450 mm - 17.72 inches',
+      'Depth': '',
+      'ArtworkPrice': '5000',
+      'Framing': 'With Framing',
+      'Year': '1890 c.',
+      'Edition': 'Edition Size 300',
+      'Provenance': 'Private collection',
+      'Medium': 'Photograph',
+      'BlogId': '42',
+      'Dispatch within:': '24 hours',
+      'MRP Price': '4999',
+      'MRP Discount': '',
+      'Corporate Discount': '10%',
+      'Architect Discount': '20%'
     };
 
     // Add dynamic attributes to example
@@ -622,11 +702,14 @@ exports.bulkUploadRentalProducts = async (req, res) => {
           const sku = row.sku?.trim();
           const filter = sku ? { sku } : { name: name.trim() };
 
+          const artworkPrice = toNumber(canon.artworkprice ?? canon.price2);
+          const mrpPrice = toNumber(canon.mrpprice);
+
           await Product.findOneAndUpdate(filter, {
             name: name.trim(),
             description: row.description || '',
-            basePrice: parseFloat(basePrice),
-            compareAtPrice: (row.compareatprice || row.sale_price) ? parseFloat(row.compareatprice || row.sale_price) : undefined,
+            basePrice: toNumber(basePrice),
+            compareAtPrice: (row.compareatprice || row.sale_price) ? toNumber(row.compareatprice || row.sale_price) : undefined,
             sku: sku || undefined,
             inventory: parseInt(row.inventory || row.stock || 0),
             category: catDoc._id,

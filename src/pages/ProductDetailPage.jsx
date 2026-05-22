@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiFetch } from '../api';
 import AdvisoryModal from '../components/AdvisoryModal';
@@ -57,8 +57,7 @@ const ProductDetailPage = () => {
   const [selectedFrameColor, setSelectedFrameColor] = useState('');
   const [selectedMount, setSelectedMount] = useState(ATTRIBUTES.mounts[0]);
   const [selectedMountColor, setSelectedMountColor] = useState('');
-  const [selectedGlaze, setSelectedGlaze] = useState(ATTRIBUTES.glazes[0]);
-  const [currentPrice, setCurrentPrice] = useState(0);
+  const [selectedGlaze] = useState(ATTRIBUTES.glazes[0]);
 
   // Shiprocket Pincode States
   const [pincode, setPincode] = useState('');
@@ -77,7 +76,6 @@ const ProductDetailPage = () => {
         setLoading(true);
         const data = await apiFetch(`/products/${slug}`);
         setProduct(data);
-        setCurrentPrice(data.basePrice || 25000);
         
         if (data.images && data.images.length > 0) {
           setMainImage(data.images[0]);
@@ -108,15 +106,15 @@ const ProductDetailPage = () => {
     fetchProduct();
   }, [slug]);
 
-  useEffect(() => {
-    if (!product) return;
+  const currentPrice = useMemo(() => {
+    if (!product) return 0;
     const basePrice = product.basePrice || 25000;
-    let price = basePrice * selectedSize.multiplier;
-    const frameAddon = price * selectedFrame.multiplier;
-    const mountAddon = price * selectedMount.multiplier;
-    const glazeAddon = price * selectedGlaze.multiplier;
-    setCurrentPrice(Math.round(price + frameAddon + mountAddon + glazeAddon));
-  }, [selectedSize, selectedFrame, selectedMount, selectedGlaze, product]);
+    const base = basePrice * selectedSize.multiplier;
+    const frameAddon = base * selectedFrame.multiplier;
+    const mountAddon = base * selectedMount.multiplier;
+    const glazeAddon = base * selectedGlaze.multiplier;
+    return Math.round(base + frameAddon + mountAddon + glazeAddon);
+  }, [product, selectedFrame, selectedGlaze, selectedMount, selectedSize]);
 
   const handleFrameChange = (f) => {
     setSelectedFrame(f);
@@ -177,7 +175,7 @@ const ProductDetailPage = () => {
                alert('Payment Successful! (Simulated)');
                return;
             }
-            const verifyData = await apiFetch('/orders/verify', {
+            await apiFetch('/orders/verify', {
               method: 'POST',
               body: JSON.stringify({
                 razorpay_order_id: response.razorpay_order_id,
@@ -186,7 +184,8 @@ const ProductDetailPage = () => {
               })
             });
             alert(`Payment Successful! Transaction ID: ${response.razorpay_payment_id}`);
-          } catch (vErr) {
+          } catch (err) {
+            console.error(err);
             alert('Payment verification failed, but payment succeeded on gateway.');
           }
         },
@@ -375,6 +374,47 @@ const ProductDetailPage = () => {
           <div className="p-info-accordion-premium" style={{ marginTop: '20px' }}>
             {[
               { title: "The Story", content: product.description || "A beautiful masterpiece capturing heritage grandeur." },
+              {
+                title: "Specifications",
+                content: (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {product.specifications && (
+                      <div style={{ color: '#444', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{product.specifications}</div>
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9rem' }}>
+                      {product.medium && <div><strong>Medium:</strong> {product.medium}</div>}
+                      {product.framing && <div><strong>Framing:</strong> {product.framing}</div>}
+                      {product.year && <div><strong>Year:</strong> {product.year}</div>}
+                      {product.edition && <div><strong>Edition:</strong> {product.edition}</div>}
+                      {(product.width || product.height || product.depth) && (
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <strong>Dimensions:</strong> {[product.width, product.height, product.depth].filter(Boolean).join(' × ')}
+                        </div>
+                      )}
+                      {product.provenance && (
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <strong>Provenance:</strong> {product.provenance}
+                        </div>
+                      )}
+                      {product.dispatchWithin && <div><strong>Dispatch Within:</strong> {product.dispatchWithin}</div>}
+                      {product.hsnCode && <div><strong>HSN:</strong> {product.hsnCode}</div>}
+                      {product.gst && <div><strong>GST:</strong> {product.gst}</div>}
+                    </div>
+                  </div>
+                )
+              },
+              {
+                title: "Pricing & Discounts",
+                content: (
+                  <div style={{ display: 'grid', gap: '10px', fontSize: '0.9rem' }}>
+                    {Number.isFinite(product.artworkPrice) && <div><strong>Artwork Price:</strong> ₹{Number(product.artworkPrice).toLocaleString()}</div>}
+                    {Number.isFinite(product.mrpPrice) && <div><strong>MRP:</strong> ₹{Number(product.mrpPrice).toLocaleString()}</div>}
+                    {product.mrpDiscount && <div><strong>MRP Discount:</strong> {product.mrpDiscount}</div>}
+                    {product.corporateDiscount && <div><strong>Corporate Discount:</strong> {product.corporateDiscount}</div>}
+                    {product.architectDiscount && <div><strong>Architect Discount:</strong> {product.architectDiscount}</div>}
+                  </div>
+                )
+              },
               { title: "Curation & Ethics", content: "Directly sourced from national award-winning artisans. 70% of proceeds go back to the artist's village development." },
               { title: "Care Instructions", content: "Wipe with a soft microfibre cloth. Avoid direct sunlight. Museum-grade glass provided for UV protection." }
             ].map(item => (

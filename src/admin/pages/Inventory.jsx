@@ -22,6 +22,24 @@ const Inventory = () => {
     description: '',
     basePrice: '',
     compareAtPrice: '',
+    hsnCode: '',
+    gst: '',
+    specifications: '',
+    width: '',
+    height: '',
+    depth: '',
+    artworkPrice: '',
+    framing: '',
+    year: '',
+    edition: '',
+    provenance: '',
+    medium: '',
+    blogId: '',
+    dispatchWithin: '',
+    mrpPrice: '',
+    mrpDiscount: '',
+    corporateDiscount: '',
+    architectDiscount: '',
     category: '',
     subCategory: '',
     space: '',
@@ -164,6 +182,24 @@ const Inventory = () => {
       description: p.description || '',
       basePrice: p.basePrice || '',
       compareAtPrice: p.compareAtPrice || '',
+      hsnCode: p.hsnCode || '',
+      gst: p.gst || '',
+      specifications: p.specifications || '',
+      width: p.width || '',
+      height: p.height || '',
+      depth: p.depth || '',
+      artworkPrice: p.artworkPrice || '',
+      framing: p.framing || '',
+      year: p.year || '',
+      edition: p.edition || '',
+      provenance: p.provenance || '',
+      medium: p.medium || '',
+      blogId: p.blogId || '',
+      dispatchWithin: p.dispatchWithin || '',
+      mrpPrice: p.mrpPrice || '',
+      mrpDiscount: p.mrpDiscount || '',
+      corporateDiscount: p.corporateDiscount || '',
+      architectDiscount: p.architectDiscount || '',
       category: p.category?._id || p.category || '',
       subCategory: p.subCategory?._id || p.subCategory || '',
       space: p.space?._id || p.space || '',
@@ -192,6 +228,24 @@ const Inventory = () => {
       description: '',
       basePrice: '',
       compareAtPrice: '',
+      hsnCode: '',
+      gst: '',
+      specifications: '',
+      width: '',
+      height: '',
+      depth: '',
+      artworkPrice: '',
+      framing: '',
+      year: '',
+      edition: '',
+      provenance: '',
+      medium: '',
+      blogId: '',
+      dispatchWithin: '',
+      mrpPrice: '',
+      mrpDiscount: '',
+      corporateDiscount: '',
+      architectDiscount: '',
       category: '',
       subCategory: '',
       space: '',
@@ -369,6 +423,104 @@ const Inventory = () => {
                   <div className="form-group">
                     <label>Stock Quantity</label>
                     <input type="number" value={formData.inventory} onChange={e => setFormData({ ...formData, inventory: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>HSN Code</label>
+                    <input type="text" value={formData.hsnCode} onChange={e => setFormData({ ...formData, hsnCode: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>GST</label>
+                    <input type="text" value={formData.gst} onChange={e => setFormData({ ...formData, gst: e.target.value })} placeholder="e.g. 5%" />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Specifications</label>
+                  <textarea value={formData.specifications} onChange={e => setFormData({ ...formData, specifications: e.target.value })} rows="3"></textarea>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Width</label>
+                    <input type="text" value={formData.width} onChange={e => setFormData({ ...formData, width: e.target.value })} placeholder="e.g. 300 mm" />
+                  </div>
+                  <div className="form-group">
+                    <label>Height</label>
+                    <input type="text" value={formData.height} onChange={e => setFormData({ ...formData, height: e.target.value })} placeholder="e.g. 450 mm" />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Depth</label>
+                    <input type="text" value={formData.depth} onChange={e => setFormData({ ...formData, depth: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Artwork Price (₹)</label>
+                    <input type="number" value={formData.artworkPrice} onChange={e => setFormData({ ...formData, artworkPrice: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Framing</label>
+                    <input type="text" value={formData.framing} onChange={e => setFormData({ ...formData, framing: e.target.value })} placeholder="e.g. With Framing" />
+                  </div>
+                  <div className="form-group">
+                    <label>Year</label>
+                    <input type="text" value={formData.year} onChange={e => setFormData({ ...formData, year: e.target.value })} placeholder="e.g. 1890 c." />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Edition</label>
+                    <input type="text" value={formData.edition} onChange={e => setFormData({ ...formData, edition: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Medium</label>
+                    <input type="text" value={formData.medium} onChange={e => setFormData({ ...formData, medium: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Provenance</label>
+                  <textarea value={formData.provenance} onChange={e => setFormData({ ...formData, provenance: e.target.value })} rows="2"></textarea>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Blog Id</label>
+                    <input type="text" value={formData.blogId} onChange={e => setFormData({ ...formData, blogId: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Dispatch Within</label>
+                    <input type="text" value={formData.dispatchWithin} onChange={e => setFormData({ ...formData, dispatchWithin: e.target.value })} placeholder="e.g. 24 hours" />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>MRP Price (₹)</label>
+                    <input type="number" value={formData.mrpPrice} onChange={e => setFormData({ ...formData, mrpPrice: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>MRP Discount</label>
+                    <input type="text" value={formData.mrpDiscount} onChange={e => setFormData({ ...formData, mrpDiscount: e.target.value })} placeholder="e.g. 10%" />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Corporate Discount</label>
+                    <input type="text" value={formData.corporateDiscount} onChange={e => setFormData({ ...formData, corporateDiscount: e.target.value })} placeholder="e.g. 10%" />
+                  </div>
+                  <div className="form-group">
+                    <label>Architect Discount</label>
+                    <input type="text" value={formData.architectDiscount} onChange={e => setFormData({ ...formData, architectDiscount: e.target.value })} placeholder="e.g. 20%" />
                   </div>
                 </div>
 
