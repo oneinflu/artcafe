@@ -9,9 +9,13 @@ export default defineConfig([
   {
     files: ['backend/**/*.js'],
     extends: [js.configs.recommended],
+    rules: {
+      'no-unused-vars': 'off',
+    },
     languageOptions: {
       globals: globals.node,
-      sourceType: 'commonjs',
+      ecmaVersion: 'latest',
+      sourceType: 'script',
     },
   },
   {
@@ -23,6 +27,7 @@ export default defineConfig([
     ],
     languageOptions: {
       globals: globals.browser,
+      ecmaVersion: 'latest',
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },

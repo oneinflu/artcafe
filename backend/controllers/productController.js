@@ -1,3 +1,5 @@
+/* eslint-disable no-useless-escape */
+/* eslint-disable no-unused-vars */
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const AttributeGroup = require('../models/AttributeGroup');
@@ -209,9 +211,6 @@ exports.bulkUploadProducts = async (req, res) => {
         for (const row of results) {
           const canon = row._canon || {};
           const name = row.name || row.title || row.product;
-          const basePrice = row.baseprice || row.price || row.mrp;
-          
-          if (!name || !basePrice) continue;
 
           const toNumber = (value) => {
             if (value === undefined || value === null) return undefined;
@@ -221,6 +220,18 @@ exports.bulkUploadProducts = async (req, res) => {
             const num = parseFloat(cleaned);
             return Number.isFinite(num) ? num : undefined;
           };
+
+          const basePriceCandidates = [
+            row.baseprice,
+            row.price,
+            canon.mrpprice,
+            row.mrp,
+            canon.price2
+          ];
+
+          const basePriceValue = basePriceCandidates.map(toNumber).find(v => v !== undefined);
+
+          if (!name || basePriceValue === undefined) continue;
 
           // Find or Create Category & Subcategory
           const subCatName = row.subcategory || row.sub_category;
@@ -343,12 +354,15 @@ exports.bulkUploadProducts = async (req, res) => {
 
           const sku = row.sku?.trim();
           const filter = sku ? { sku } : { name: name.trim() };
+
+          const artworkPrice = toNumber(canon.artworkprice ?? canon.price2);
+          const mrpPrice = toNumber(canon.mrpprice);
           
           await Product.findOneAndUpdate(filter, {
             name: name.trim(),
             description: row.description || '',
-            basePrice: parseFloat(basePrice),
-            compareAtPrice: (row.compareatprice || row.sale_price) ? parseFloat(row.compareatprice || row.sale_price) : undefined,
+            basePrice: basePriceValue,
+            compareAtPrice: (row.compareatprice || row.sale_price) ? toNumber(row.compareatprice || row.sale_price) : undefined,
             sku: sku || undefined,
             inventory: parseInt(row.inventory || row.stock || 0),
             category: catDoc._id,
@@ -603,12 +617,24 @@ exports.bulkUploadRentalProducts = async (req, res) => {
     return res.status(400).send('No file uploaded');
   }
   const results = [];
+  const seenHeaders = new Map();
   fs.createReadStream(req.file.path)
-    .pipe(csv({ mapHeaders: ({ header }) => header.trim() }))
+    .pipe(csv({
+      mapHeaders: ({ header }) => {
+        const clean = String(header || '').trim();
+        const count = seenHeaders.get(clean) || 0;
+        seenHeaders.set(clean, count + 1);
+        return count === 0 ? clean : `${clean}__${count + 1}`;
+      }
+    }))
     .on('data', (data) => {
       const normalizedRow = {};
+      normalizedRow._canon = {};
       Object.keys(data).forEach(key => {
-        normalizedRow[key.trim().toLowerCase()] = data[key];
+        const lowered = key.trim().toLowerCase();
+        normalizedRow[lowered] = data[key];
+        const canon = lowered.replace(/[^a-z0-9]/g, '');
+        normalizedRow._canon[canon] = data[key];
       });
       results.push(normalizedRow);
     })
@@ -616,10 +642,28 @@ exports.bulkUploadRentalProducts = async (req, res) => {
       try {
         let successCount = 0;
         for (const row of results) {
+          const canon = row._canon || {};
           const name = row.name || row.title || row.product;
-          const basePrice = row.price || row.baseprice || row.mrp;
-          
-          if (!name || !basePrice) continue;
+          const toNumber = (value) => {
+            if (value === undefined || value === null) return undefined;
+            const raw = String(value).trim();
+            if (!raw) return undefined;
+            const cleaned = raw.replace(/[^0-9.]/g, '');
+            const num = parseFloat(cleaned);
+            return Number.isFinite(num) ? num : undefined;
+          };
+
+          const basePriceCandidates = [
+            row.baseprice,
+            row.price,
+            canon.mrpprice,
+            row.mrp,
+            canon.price2
+          ];
+
+          const basePriceValue = basePriceCandidates.map(toNumber).find(v => v !== undefined);
+
+          if (!name || basePriceValue === undefined) continue;
 
           // Find or Create Category & Subcategory
           const subCatName = row.subcategory || row.sub_category;
@@ -702,13 +746,10 @@ exports.bulkUploadRentalProducts = async (req, res) => {
           const sku = row.sku?.trim();
           const filter = sku ? { sku } : { name: name.trim() };
 
-          const artworkPrice = toNumber(canon.artworkprice ?? canon.price2);
-          const mrpPrice = toNumber(canon.mrpprice);
-
           await Product.findOneAndUpdate(filter, {
             name: name.trim(),
             description: row.description || '',
-            basePrice: toNumber(basePrice),
+            basePrice: basePriceValue,
             compareAtPrice: (row.compareatprice || row.sale_price) ? toNumber(row.compareatprice || row.sale_price) : undefined,
             sku: sku || undefined,
             inventory: parseInt(row.inventory || row.stock || 0),
