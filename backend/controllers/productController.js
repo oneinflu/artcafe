@@ -337,15 +337,46 @@ exports.bulkUploadProducts = async (req, res) => {
               canon.nestedcategorycode ?? canon.nestedcategorycodenumber ?? canon.nestedcategorycno ?? ''
             ).trim();
 
+            const looksLikeObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(String(value || '').trim());
+            const countCodeParts = (value) => String(value || '').trim().split('-').map(p => p.trim()).filter(Boolean).length;
+
+            let catCodeNorm = catCode;
+            let subCodeNorm = subCode;
+            let nestedCodeNorm = nestedCode;
+
+            if (!subCodeNorm && !nestedCodeNorm && catCodeNorm && catCodeNorm.includes('-')) {
+              const parts = countCodeParts(catCodeNorm);
+              if (parts === 2) {
+                subCodeNorm = catCodeNorm;
+                catCodeNorm = '';
+              } else if (parts >= 3) {
+                nestedCodeNorm = catCodeNorm;
+                catCodeNorm = '';
+              }
+            }
+            if (!nestedCodeNorm && subCodeNorm && subCodeNorm.includes('-') && !catCodeNorm) {
+              const parts = countCodeParts(subCodeNorm);
+              if (parts >= 3) {
+                nestedCodeNorm = subCodeNorm;
+                subCodeNorm = '';
+              }
+            }
+
             const findCategoryByCodeOrName = async ({ code, name, parentId, mustExistIfCode }) => {
               const codeVal = String(code || '').trim();
               const nameVal = String(name || '').trim();
               if (codeVal) {
-                const doc = await Category.findOne({
-                  ...categoryTypeFilter,
-                  codeNumber: codeVal,
-                  ...(parentId !== undefined ? { parentCategory: parentId } : {})
-                });
+                const doc = looksLikeObjectId(codeVal)
+                  ? await Category.findOne({
+                    ...categoryTypeFilter,
+                    _id: codeVal,
+                    ...(parentId !== undefined ? { parentCategory: parentId } : {})
+                  })
+                  : await Category.findOne({
+                    ...categoryTypeFilter,
+                    codeNumber: codeVal,
+                    ...(parentId !== undefined ? { parentCategory: parentId } : {})
+                  });
                 if (!doc && mustExistIfCode) {
                   throw new Error(`Category code not found: ${codeVal}`);
                 }
@@ -373,21 +404,21 @@ exports.bulkUploadProducts = async (req, res) => {
             let nestedCatDoc = null;
 
             catDoc = await findCategoryByCodeOrName({
-              code: catCode,
+              code: catCodeNorm,
               name: catName,
               parentId: null,
               mustExistIfCode: true
             });
 
             subCatDoc = await findCategoryByCodeOrName({
-              code: subCode,
+              code: subCodeNorm,
               name: subCatName,
               parentId: catDoc ? catDoc._id : undefined,
               mustExistIfCode: true
             });
 
             nestedCatDoc = await findCategoryByCodeOrName({
-              code: nestedCode,
+              code: nestedCodeNorm,
               name: nestedCatName,
               parentId: subCatDoc ? subCatDoc._id : undefined,
               mustExistIfCode: true
@@ -406,6 +437,13 @@ exports.bulkUploadProducts = async (req, res) => {
             }
             if (!catDoc && subCatDoc?.parentCategory) {
               catDoc = await Category.findById(subCatDoc.parentCategory);
+            }
+
+            if (catDoc && subCatDoc?.parentCategory && String(subCatDoc.parentCategory) !== String(catDoc._id)) {
+              throw new Error('SubCategory does not belong to the provided Category');
+            }
+            if (subCatDoc && nestedCatDoc?.parentCategory && String(nestedCatDoc.parentCategory) !== String(subCatDoc._id)) {
+              throw new Error('NestedCategory does not belong to the provided SubCategory');
             }
 
             if (!catDoc) throw new Error('Missing Category / SubCategory');
@@ -613,11 +651,11 @@ exports.getTemplate = async (req, res) => {
       'Name': 'Premium Business Cards',
       'Description': 'High quality matte finish cards',
       'IsActive': 'true',
-      'CategoryCode': '200',
+      'CategoryCode': '1',
       'Category': 'Business Cards',
-      'SubCategoryCode': '200-1',
+      'SubCategoryCode': '1-1',
       'SubCategory': 'Premium Cards',
-      'NestedCategoryCode': '200-1-1',
+      'NestedCategoryCode': '1-1-1',
       'NestedCategory': 'Textured Cards',
       'Space': 'Living Room',
       'Style': 'Modern Luxury',

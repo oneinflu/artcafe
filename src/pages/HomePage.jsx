@@ -377,6 +377,29 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
         </div>
       </section>
 
+      {displayRootCategories.length > 0 && (
+        <section className="curated-categories-section section">
+          <div className="container">
+            <div className="section-header-luxury centered">
+              <span className="subtitle gold">SHOP BY CATEGORY</span>
+              <h2 className="luxury-title-main">Root Categories</h2>
+            </div>
+            <div className="categories-grid-luxury">
+              {displayRootCategories.map((cat, i) => (
+                <Link key={cat._id || i} to={`/shop?category=${slugify(cat.name)}`} className="category-card-luxury" style={{ display: 'block', textDecoration: 'none' }}>
+                  <img src={cat.img} alt={cat.name} />
+                  <div className="cat-overlay">
+                    <h3>{cat.name}</h3>
+                    <span>{cat.count}</span>
+                    <button className="view-cat">EXPLORE CATEGORY</button>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* SECTION 2: Horizontal Moving New Arrivals */}
       <section className="new-arrivals-ticker-section">
         <div className="ticker-header container">
@@ -985,29 +1008,6 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
       </section>
 
       {/* SECTION 10.5: Curated Collections */}
-      {displayRootCategories.length > 0 && (
-        <section className="curated-categories-section section">
-          <div className="container">
-            <div className="section-header-luxury centered">
-              <span className="subtitle gold">SHOP BY CATEGORY</span>
-              <h2 className="luxury-title-main">Root Categories</h2>
-            </div>
-            <div className="categories-grid-luxury">
-              {displayRootCategories.map((cat, i) => (
-                <Link key={cat._id || i} to={`/shop?category=${slugify(cat.name)}`} className="category-card-luxury" style={{ display: 'block', textDecoration: 'none' }}>
-                  <img src={cat.img} alt={cat.name} />
-                  <div className="cat-overlay">
-                    <h3>{cat.name}</h3>
-                    <span>{cat.count}</span>
-                    <button className="view-cat">EXPLORE CATEGORY</button>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       <section className="curated-categories-section section">
         <div className="container">
           <div className="section-header-luxury centered">
