@@ -16,6 +16,8 @@ const cloudinaryUpload = require('../config/cloudinary');
 // @route   GET api/categories
 router.get('/', categoryController.getCategories);
 
+router.get('/template', auth('admin'), categoryController.getTemplate);
+
 // @route   POST api/categories
 // Use cloudinaryUpload.single('image') for creating a category with an image
 router.post('/', auth('admin'), cloudinaryUpload.single('image'), categoryController.createCategory);

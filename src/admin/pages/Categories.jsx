@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiFetch } from '../../api';
+import BASE_URL, { apiFetch } from '../../api';
 import BulkUpload from '../components/BulkUpload';
 import { useLocation } from 'react-router-dom';
 
@@ -41,6 +41,26 @@ const Categories = () => {
     } catch (err) {
       console.error("Error fetching categories:", err);
       setLoading(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/categories/template?type=${activeTab}`, {
+        headers: {
+          'x-auth-token': localStorage.getItem('token')
+        }
+      });
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `category_template_${activeTab}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      alert("Error downloading template: " + err.message);
     }
   };
 
@@ -198,7 +218,16 @@ const Categories = () => {
         </div>
         <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {activeTab === 'product' && (
-            <BulkUpload endpoint="/categories/bulk" onComplete={fetchCategories} label="Bulk Upload" />
+            <>
+              <button className="btn-secondary" onClick={handleDownloadTemplate}>📥 Download Template</button>
+              <BulkUpload endpoint={`/categories/bulk?type=${activeTab}`} onComplete={fetchCategories} label="Bulk Upload" />
+            </>
+          )}
+          {activeTab === 'blog' && (
+            <>
+              <button className="btn-secondary" onClick={handleDownloadTemplate}>📥 Download Template</button>
+              <BulkUpload endpoint={`/categories/bulk?type=${activeTab}`} onComplete={fetchCategories} label="Bulk Upload" />
+            </>
           )}
           <button className="btn-primary" onClick={openAdd}>+ Add {activeTab === 'blog' ? 'Blog' : ''} Category</button>
         </div>
