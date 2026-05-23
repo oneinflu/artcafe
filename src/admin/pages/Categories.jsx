@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { apiFetch } from '../../api';
 import BulkUpload from '../components/BulkUpload';
 import { useLocation } from 'react-router-dom';
@@ -15,6 +15,9 @@ const Categories = () => {
   const [showModal, setShowModal] = useState(false);
   const [editCategory, setEditCategory] = useState(null);
   const [imageFile, setImageFile] = useState(null);
+  const [categoryLevel, setCategoryLevel] = useState('root'); // root | sub | nested
+  const [rootParentId, setRootParentId] = useState('');
+  const [subParentId, setSubParentId] = useState('');
   const [formData, setFormData] = useState({ 
     name: '', 
     description: '', 
@@ -29,11 +32,6 @@ const Categories = () => {
     setActiveTab(type);
   }, [location.search]);
 
-  useEffect(() => {
-    setSelectedRootId('all');
-    fetchCategories();
-  }, [activeTab]);
-
   const fetchCategories = async () => {
     setLoading(true);
     try {
@@ -45,6 +43,11 @@ const Categories = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setSelectedRootId('all');
+    fetchCategories();
+  }, [activeTab]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,6 +92,24 @@ const Categories = () => {
   const openEdit = (c) => {
     setEditCategory(c);
     setImageFile(null);
+    const parentId = c.parentCategory?._id || c.parentCategory || '';
+    if (!parentId) {
+      setCategoryLevel('root');
+      setRootParentId('');
+      setSubParentId('');
+    } else {
+      const parent = categories.find(pc => pc._id === parentId);
+      const parentParentId = parent?.parentCategory?._id || parent?.parentCategory || '';
+      if (!parent || !parentParentId) {
+        setCategoryLevel('sub');
+        setRootParentId(parentId);
+        setSubParentId('');
+      } else {
+        setCategoryLevel('nested');
+        setRootParentId(parentParentId);
+        setSubParentId(parentId);
+      }
+    }
     setFormData({
       name: c.name || '',
       description: c.description || '',
@@ -103,6 +124,9 @@ const Categories = () => {
   const openAdd = () => {
     setEditCategory(null);
     setImageFile(null);
+    setCategoryLevel('root');
+    setRootParentId('');
+    setSubParentId('');
     setFormData({ 
       name: '', 
       description: '', 
@@ -116,10 +140,22 @@ const Categories = () => {
 
   const rootCategories = categories.filter(c => !c.parentCategory);
 
+  const categoriesById = new Map(categories.map(c => [c._id, c]));
+  const getRootAncestorId = (category) => {
+    let current = category;
+    const seen = new Set();
+    while (current && current.parentCategory) {
+      const pId = current.parentCategory?._id || current.parentCategory;
+      if (!pId || seen.has(pId)) break;
+      seen.add(pId);
+      current = categoriesById.get(pId);
+    }
+    return current?._id || category?._id;
+  };
+
   const filteredCategories = categories.filter(c => {
     if (selectedRootId === 'all') return true;
-    const parentId = c.parentCategory?._id || c.parentCategory;
-    return c._id === selectedRootId || parentId === selectedRootId;
+    return getRootAncestorId(c) === selectedRootId || c._id === selectedRootId;
   });
 
   return (
@@ -206,8 +242,7 @@ const Categories = () => {
           </button>
           {rootCategories.map(rc => {
             const childrenCount = categories.filter(c => {
-              const pId = c.parentCategory?._id || c.parentCategory;
-              return c._id === rc._id || pId === rc._id;
+              return getRootAncestorId(c) === rc._id || c._id === rc._id;
             }).length;
 
             return (
@@ -269,13 +304,22 @@ const Categories = () => {
                     </div>
                   </td>
                   <td>
-                    {c.parentCategory ? (
-                      <span className="status-pill processing">
-                        {categories.find(pc => pc._id === (c.parentCategory?._id || c.parentCategory))?.name || 'Sub-Category'}
-                      </span>
-                    ) : (
-                      <span className="status-pill shipped">Root Category</span>
-                    )}
+                    {(() => {
+                      const parentId = c.parentCategory?._id || c.parentCategory || '';
+                      if (!parentId) {
+                        return <span className="status-pill shipped">Root Category</span>;
+                      }
+                      const parent = categoriesById.get(parentId);
+                      const parentParentId = parent?.parentCategory?._id || parent?.parentCategory || '';
+                      if (!parent || !parentParentId) {
+                        const rootName = parent?.name || 'Root';
+                        return <span className="status-pill processing">Sub under {rootName}</span>;
+                      }
+                      const root = categoriesById.get(parentParentId);
+                      const subName = parent?.name || 'Sub';
+                      const rootName = root?.name || 'Root';
+                      return <span className="status-pill processing">Nested under {subName} ({rootName})</span>;
+                    })()}
                   </td>
                   <td>
                     <button className="btn-icon" onClick={() => openEdit(c)}>✏️</button>
@@ -314,7 +358,12 @@ const Categories = () => {
                       name="type" 
                       value="product" 
                       checked={formData.type === 'product'} 
-                      onChange={e => setFormData({...formData, type: e.target.value})}
+                      onChange={e => {
+                        setCategoryLevel('root');
+                        setRootParentId('');
+                        setSubParentId('');
+                        setFormData({ ...formData, type: e.target.value, parentCategory: '' });
+                      }}
                     />
                     Product
                   </label>
@@ -324,7 +373,12 @@ const Categories = () => {
                       name="type" 
                       value="blog" 
                       checked={formData.type === 'blog'} 
-                      onChange={e => setFormData({...formData, type: e.target.value})}
+                      onChange={e => {
+                        setCategoryLevel('root');
+                        setRootParentId('');
+                        setSubParentId('');
+                        setFormData({ ...formData, type: e.target.value, parentCategory: '' });
+                      }}
                     />
                     Blog
                   </label>
@@ -333,14 +387,30 @@ const Categories = () => {
               
               <div className="form-row">
                 <div className="form-group">
-                  <label>Parent Category</label>
-                  <select value={formData.parentCategory} onChange={e => setFormData({...formData, parentCategory: e.target.value})}>
-                    <option value="">None (Main Category)</option>
-                    {categories
-                      .filter(c => c._id !== editCategory?._id && c.type === formData.type)
-                      .map(c => (
-                        <option key={c._id} value={c._id}>{c.name}</option>
-                      ))}
+                  <label>Category Level</label>
+                  <select
+                    value={categoryLevel}
+                    onChange={e => {
+                      const level = e.target.value;
+                      setCategoryLevel(level);
+                      if (level === 'root') {
+                        setRootParentId('');
+                        setSubParentId('');
+                        setFormData({ ...formData, parentCategory: '' });
+                      } else if (level === 'sub') {
+                        setRootParentId('');
+                        setSubParentId('');
+                        setFormData({ ...formData, parentCategory: '' });
+                      } else {
+                        setRootParentId('');
+                        setSubParentId('');
+                        setFormData({ ...formData, parentCategory: '' });
+                      }
+                    }}
+                  >
+                    <option value="root">Root</option>
+                    <option value="sub">Sub (child of Root)</option>
+                    <option value="nested">Nested (child of Sub)</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -348,6 +418,60 @@ const Categories = () => {
                   <input type="number" value={formData.displayOrder} onChange={e => setFormData({...formData, displayOrder: e.target.value})} />
                 </div>
               </div>
+
+              {categoryLevel !== 'root' && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Root Category</label>
+                    <select
+                      value={rootParentId}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setRootParentId(val);
+                        setSubParentId('');
+                        if (categoryLevel === 'sub') {
+                          setFormData({ ...formData, parentCategory: val });
+                        } else {
+                          setFormData({ ...formData, parentCategory: '' });
+                        }
+                      }}
+                    >
+                      <option value="">Select Root</option>
+                      {categories
+                        .filter(c => c._id !== editCategory?._id && (c.type || 'product') === formData.type && !c.parentCategory)
+                        .map(c => (
+                          <option key={c._id} value={c._id}>{c.name}</option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {categoryLevel === 'nested' && (
+                    <div className="form-group">
+                      <label>Sub Category</label>
+                      <select
+                        value={subParentId}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setSubParentId(val);
+                          setFormData({ ...formData, parentCategory: val });
+                        }}
+                        disabled={!rootParentId}
+                      >
+                        <option value="">Select Sub</option>
+                        {categories
+                          .filter(c => c._id !== editCategory?._id && (c.type || 'product') === formData.type)
+                          .filter(c => {
+                            const pId = c.parentCategory?._id || c.parentCategory;
+                            return pId && rootParentId && pId === rootParentId;
+                          })
+                          .map(c => (
+                            <option key={c._id} value={c._id}>{c.name}</option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="form-group">
                 <label>Description</label>
