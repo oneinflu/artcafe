@@ -17,7 +17,7 @@ const Categories = () => {
   const [imageFile, setImageFile] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState('all'); // all | root | sub | nested
-  const [sortBy, setSortBy] = useState('code'); // code | name | displayOrder
+  const [sortBy, setSortBy] = useState('code'); // code | name
   const [sortDir, setSortDir] = useState('asc'); // asc | desc
   const [selectedIds, setSelectedIds] = useState({});
   const [categoryLevel, setCategoryLevel] = useState('root'); // root | sub | nested
@@ -83,12 +83,16 @@ const Categories = () => {
     const endpoint = editCategory ? `/categories/${editCategory._id}` : '/categories';
     const method = editCategory ? 'PUT' : 'POST';
 
+    const codeVal = String(formData.codeNumber || '').trim();
+    const codeNum = parseInt(codeVal, 10);
+    const inferredDisplayOrder = Number.isFinite(codeNum) ? codeNum : 0;
+
     const fd = new FormData();
     fd.append('codeNumber', formData.codeNumber || '');
     fd.append('name', formData.name);
     fd.append('description', formData.description || '');
     fd.append('parentCategory', formData.parentCategory || '');
-    fd.append('displayOrder', formData.displayOrder);
+    fd.append('displayOrder', inferredDisplayOrder);
     fd.append('type', formData.type);
     if (imageFile) {
       fd.append('image', imageFile);
@@ -181,13 +185,21 @@ const Categories = () => {
     setCategoryLevel('root');
     setRootParentId('');
     setSubParentId('');
+
+    const maxCode = categories
+      .filter(c => (c.type || activeTab) === activeTab)
+      .map(c => parseInt(String(c.codeNumber || '').trim(), 10))
+      .filter(n => Number.isFinite(n))
+      .reduce((acc, n) => Math.max(acc, n), 1000);
+    const nextCode = String(maxCode + 1);
+
     setFormData({ 
-      codeNumber: '',
+      codeNumber: nextCode,
       name: '', 
       description: '', 
       parentCategory: '', 
       image: '', 
-      displayOrder: categories.length > 0 ? Math.max(...categories.map(c => c.displayOrder || 0)) + 1 : 1,
+      displayOrder: parseInt(nextCode, 10),
       type: activeTab 
     });
     setShowModal(true);
@@ -238,9 +250,6 @@ const Categories = () => {
     })
     .sort((a, b) => {
       const dir = sortDir === 'desc' ? -1 : 1;
-      if (sortBy === 'displayOrder') {
-        return dir * ((Number(a.displayOrder || 0)) - (Number(b.displayOrder || 0)));
-      }
       if (sortBy === 'name') {
         return dir * String(a.name || '').localeCompare(String(b.name || ''));
       }
@@ -343,7 +352,6 @@ const Categories = () => {
         <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #ddd' }}>
           <option value="code">Sort: Code</option>
           <option value="name">Sort: Name</option>
-          <option value="displayOrder">Sort: Order</option>
         </select>
 
         <select value={sortDir} onChange={e => setSortDir(e.target.value)} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #ddd' }}>
@@ -430,7 +438,6 @@ const Categories = () => {
                 <th style={{ width: '110px' }}>Code</th>
                 <th>Category</th>
                 <th style={{ width: '220px' }}>Level</th>
-                <th style={{ width: '90px' }}>Order</th>
                 <th style={{ width: '110px' }}>Actions</th>
               </tr>
             </thead>
@@ -476,7 +483,6 @@ const Categories = () => {
                       return <span className="status-pill processing">Nested under {subName} ({rootName})</span>;
                     })()}
                   </td>
-                  <td style={{ fontWeight: 800, color: '#ff6b00' }}>#{c.displayOrder || 0}</td>
                   <td>
                     <button className="btn-icon" onClick={() => openEdit(c)}>✏️</button>
                     <button className="btn-icon delete" onClick={() => handleDelete(c._id)}>🗑️</button>
@@ -485,7 +491,7 @@ const Categories = () => {
               ))}
               {visibleCategories.length === 0 && (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
                     No {activeTab} categories found.
                   </td>
                 </tr>
@@ -574,10 +580,6 @@ const Categories = () => {
                     <option value="sub">Sub (child of Root)</option>
                     <option value="nested">Nested (child of Sub)</option>
                   </select>
-                </div>
-                <div className="form-group">
-                  <label>Display Order</label>
-                  <input type="number" value={formData.displayOrder} onChange={e => setFormData({...formData, displayOrder: e.target.value})} />
                 </div>
               </div>
 

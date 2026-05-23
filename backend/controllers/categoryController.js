@@ -2,6 +2,16 @@ const Category = require('../models/Category');
 const fs = require('fs');
 const csv = require('csv-parser');
 
+const nextCategoryCodeNumber = async (type) => {
+  const docs = await Category.find({ type, codeNumber: { $exists: true, $ne: null } }, { codeNumber: 1 });
+  let max = 1000;
+  docs.forEach(d => {
+    const n = parseInt(String(d.codeNumber).trim(), 10);
+    if (Number.isFinite(n) && n > max) max = n;
+  });
+  return String(max + 1);
+};
+
 exports.getCategories = async (req, res) => {
   try {
     const filter = {};
@@ -31,6 +41,13 @@ exports.createCategory = async (req, res) => {
     if (categoryData.codeNumber !== undefined && categoryData.codeNumber !== null) {
       const v = String(categoryData.codeNumber).trim();
       categoryData.codeNumber = v ? v : undefined;
+    }
+    if (!categoryData.codeNumber) {
+      categoryData.codeNumber = await nextCategoryCodeNumber(categoryData.type === 'blog' ? 'blog' : 'product');
+    }
+    if (!categoryData.displayOrder || String(categoryData.displayOrder).trim() === '') {
+      const n = parseInt(String(categoryData.codeNumber).trim(), 10);
+      categoryData.displayOrder = Number.isFinite(n) ? n : 0;
     }
     if (!categoryData.parentCategory || categoryData.parentCategory === "" || categoryData.parentCategory === "null") {
       categoryData.parentCategory = null;
@@ -208,6 +225,10 @@ exports.bulkUploadCategories = async (req, res) => {
         };
 
         const levelOrder = { root: 0, sub: 1, nested: 2 };
+        const nextCodes = {
+          product: parseInt(await nextCategoryCodeNumber('product'), 10),
+          blog: parseInt(await nextCategoryCodeNumber('blog'), 10)
+        };
         const rowsSorted = results
           .map((r, idx) => ({ r, idx }))
           .sort((a, b) => {
@@ -222,8 +243,13 @@ exports.bulkUploadCategories = async (req, res) => {
           const name = String(row.name || '').trim();
           if (!name) continue;
 
-          const codeNumber = normalizeCode(row.codenumber ?? row.code ?? canon.codenumber ?? canon.code);
-          const displayOrder = toInt(row.displayorder ?? row.display_order ?? canon.displayorder) ?? (idx + 1);
+          let codeNumber = normalizeCode(row.codenumber ?? row.code ?? canon.codenumber ?? canon.code);
+          if (!codeNumber) {
+            const candidate = nextCodes[type];
+            nextCodes[type] = candidate + 1;
+            codeNumber = String(candidate);
+          }
+          const displayOrder = toInt(row.displayorder ?? row.display_order ?? canon.displayorder) ?? parseInt(codeNumber, 10) ?? (idx + 1);
           const description = row.description || '';
           const level = normalizeLevel(canon.level) || 'root';
 
@@ -301,7 +327,6 @@ exports.getTemplate = async (req, res) => {
       'CodeNumber',
       'Name',
       'Description',
-      'DisplayOrder',
       'Type',
       'Level',
       'RootCategory',
@@ -314,7 +339,6 @@ exports.getTemplate = async (req, res) => {
         CodeNumber: '1001',
         Name: 'Art Prints',
         Description: 'All art prints',
-        DisplayOrder: '1',
         Type: type,
         Level: 'root',
         RootCategory: '',
@@ -325,7 +349,6 @@ exports.getTemplate = async (req, res) => {
         CodeNumber: '1101',
         Name: 'Vintage Photograph',
         Description: 'Photography based prints',
-        DisplayOrder: '2',
         Type: type,
         Level: 'sub',
         RootCategory: 'Art Prints',
@@ -336,7 +359,6 @@ exports.getTemplate = async (req, res) => {
         CodeNumber: '1111',
         Name: 'Bombay',
         Description: 'Bombay collection',
-        DisplayOrder: '3',
         Type: type,
         Level: 'nested',
         RootCategory: 'Art Prints',

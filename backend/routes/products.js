@@ -20,6 +20,7 @@ router.get('/', productController.getProducts);
 router.get('/:id', productController.getProduct);
 
 router.post('/bulk', auth('admin'), localUpload.single('file'), productController.bulkUploadProducts);
+router.post('/bulk-delete', auth('admin'), productController.bulkDeleteProducts);
 router.post('/', auth('admin'), cloudinaryProductUpload.array('images', 10), productController.createProduct);
 router.put('/:id', auth('admin'), cloudinaryProductUpload.array('images', 10), productController.updateProduct);
 router.delete('/:id', auth('admin'), productController.deleteProduct);

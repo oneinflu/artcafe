@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { resolveImageUrl } from '../../utils/helpers';
 import BASE_URL, { apiFetch } from '../../api';
 import BulkUpload from '../components/BulkUpload';
@@ -13,6 +13,11 @@ const Inventory = () => {
   const [volumetricWeights, setVolumetricWeights] = useState({});
   const [loadingVolumetricWeights, setLoadingVolumetricWeights] = useState(false);
   const [lastBulkUploadResult, setLastBulkUploadResult] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('name'); // name | sku | price | stock
+  const [sortDir, setSortDir] = useState('asc'); // asc | desc
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [selectedIds, setSelectedIds] = useState({});
   const [categories, setCategories] = useState([]);
   const [spaces, setSpaces] = useState([]);
   const [styles, setStyles] = useState([]);
@@ -179,6 +184,61 @@ const Inventory = () => {
       }
     }
   };
+
+  const selectedCount = Object.keys(selectedIds).filter(id => selectedIds[id]).length;
+  const toggleSelectOne = (id) => setSelectedIds(prev => ({ ...prev, [id]: !prev[id] }));
+  const toggleSelectAllVisible = (visible) => {
+    const shouldSelectAll = visible.length > 0 && !visible.every(p => selectedIds[p._id]);
+    setSelectedIds(prev => {
+      const next = { ...prev };
+      visible.forEach(p => {
+        next[p._id] = shouldSelectAll;
+      });
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async (ids) => {
+    if (!ids.length) return;
+    if (!window.confirm(`Delete ${ids.length} selected products?`)) return;
+    try {
+      const res = await apiFetch('/products/bulk-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids })
+      });
+      alert(res.msg || 'Deleted');
+      setSelectedIds({});
+      fetchProducts();
+    } catch (err) {
+      alert("Bulk delete failed: " + err.message);
+    }
+  };
+
+  const rootCategories = useMemo(() => categories.filter(c => !c.parentCategory && (c.type || 'product') !== 'blog'), [categories]);
+  const visibleProducts = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    const filtered = products
+      .filter(p => {
+        if (categoryFilter === 'all') return true;
+        const catId = p.category?._id || p.category;
+        return String(catId || '') === categoryFilter;
+      })
+      .filter(p => {
+        if (!q) return true;
+        return (
+          String(p.name || '').toLowerCase().includes(q) ||
+          String(p.sku || '').toLowerCase().includes(q)
+        );
+      });
+
+    const dir = sortDir === 'desc' ? -1 : 1;
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'sku') return dir * String(a.sku || '').localeCompare(String(b.sku || ''));
+      if (sortBy === 'price') return dir * ((Number(a.basePrice || 0)) - (Number(b.basePrice || 0)));
+      if (sortBy === 'stock') return dir * ((Number(a.inventory || 0)) - (Number(b.inventory || 0)));
+      return dir * String(a.name || '').localeCompare(String(b.name || ''));
+    });
+  }, [products, searchTerm, sortBy, sortDir, categoryFilter]);
 
   const openEdit = (p) => {
     setEditProduct(p);
@@ -421,8 +481,45 @@ const Inventory = () => {
             onResult={(res) => setLastBulkUploadResult(res)}
             label="Bulk Upload"
           />
+          {selectedCount > 0 && (
+            <button
+              className="btn-secondary"
+              onClick={() => handleBulkDelete(Object.keys(selectedIds).filter(id => selectedIds[id]))}
+            >
+              🗑️ Delete Selected ({selectedCount})
+            </button>
+          )}
           <button className="btn-primary" onClick={openAdd}>+ Add Product</button>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', margin: '10px 0 20px' }}>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          placeholder="Search by name or SKU..."
+          style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #ddd', minWidth: '260px' }}
+        />
+
+        <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #ddd' }}>
+          <option value="all">All Categories</option>
+          {rootCategories.map(c => (
+            <option key={c._id} value={c._id}>{c.name}</option>
+          ))}
+        </select>
+
+        <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #ddd' }}>
+          <option value="name">Sort: Name</option>
+          <option value="sku">Sort: SKU</option>
+          <option value="price">Sort: Price</option>
+          <option value="stock">Sort: Stock</option>
+        </select>
+
+        <select value={sortDir} onChange={e => setSortDir(e.target.value)} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #ddd' }}>
+          <option value="asc">Asc</option>
+          <option value="desc">Desc</option>
+        </select>
       </div>
 
       {lastBulkUploadResult?.failureCount > 0 && (
@@ -461,6 +558,13 @@ const Inventory = () => {
           <table className="admin-table">
             <thead>
               <tr>
+                <th style={{ width: '50px' }}>
+                  <input
+                    type="checkbox"
+                    checked={visibleProducts.length > 0 && visibleProducts.every(p => selectedIds[p._id])}
+                    onChange={() => toggleSelectAllVisible(visibleProducts)}
+                  />
+                </th>
                 <th>Product</th>
                 <th>Category</th>
                 <th>Price</th>
@@ -471,8 +575,11 @@ const Inventory = () => {
               </tr>
             </thead>
             <tbody>
-              {products.map(p => (
+              {visibleProducts.map(p => (
                 <tr key={p._id}>
+                  <td>
+                    <input type="checkbox" checked={!!selectedIds[p._id]} onChange={() => toggleSelectOne(p._id)} />
+                  </td>
                   <td className="product-cell">
                     <img src={resolveImageUrl(p.images?.[0])} alt="" />
                     <div>
@@ -513,6 +620,13 @@ const Inventory = () => {
                   </td>
                 </tr>
               ))}
+              {visibleProducts.length === 0 && (
+                <tr>
+                  <td colSpan={showVolumetricWeight ? 8 : 7} style={{ textAlign: 'center', padding: '30px', color: '#999' }}>
+                    No products found.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

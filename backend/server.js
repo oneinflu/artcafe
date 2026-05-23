@@ -17,7 +17,18 @@ const db = process.env.MONGO_URI;
 // Connect to MongoDB
 mongoose
   .connect(db)
-  .then(() => console.log('MongoDB Connected...'))
+  .then(async () => {
+    console.log('MongoDB Connected...');
+    try {
+      const Category = require('./models/Category');
+      await Category.collection.dropIndex('name_1_type_1');
+    } catch (err) {
+      const msg = String(err?.message || '');
+      if (msg && !msg.toLowerCase().includes('index not found')) {
+        console.log(msg);
+      }
+    }
+  })
   .catch(err => console.log(err));
 
 // Use Routes

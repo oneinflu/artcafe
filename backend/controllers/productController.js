@@ -217,6 +217,17 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
+exports.bulkDeleteProducts = async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+    const cleaned = ids.map(String).filter(Boolean);
+    const result = await Product.deleteMany({ _id: { $in: cleaned } });
+    res.json({ msg: `Removed ${result.deletedCount} products` });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+};
+
 exports.bulkUploadProducts = async (req, res) => {
   console.log('--- Bulk Upload Started ---');
   if (!req.file) {
@@ -283,50 +294,71 @@ exports.bulkUploadProducts = async (req, res) => {
             const subCatName = String(row.subcategory || row.sub_category || '').trim();
             const nestedCatName = String(row.nestedcategory || row.nested_category || '').trim();
             const catName = String(row.category || '').trim();
+            const catCode = String(
+              canon.categorycode ?? canon.categorycodenumber ?? canon.categorycno ?? ''
+            ).trim();
+            const subCode = String(
+              canon.subcategorycode ?? canon.subcategorycodenumber ?? canon.subcategorycno ?? ''
+            ).trim();
+            const nestedCode = String(
+              canon.nestedcategorycode ?? canon.nestedcategorycodenumber ?? canon.nestedcategorycno ?? ''
+            ).trim();
+
+            const findCategoryByCodeOrName = async ({ code, name, parentId, mustExistIfCode }) => {
+              const codeVal = String(code || '').trim();
+              const nameVal = String(name || '').trim();
+              if (codeVal) {
+                const doc = await Category.findOne({
+                  ...categoryTypeFilter,
+                  codeNumber: codeVal,
+                  ...(parentId !== undefined ? { parentCategory: parentId } : {})
+                });
+                if (!doc && mustExistIfCode) {
+                  throw new Error(`Category code not found: ${codeVal}`);
+                }
+                return doc;
+              }
+              if (!nameVal) return null;
+              let doc = await Category.findOne({
+                ...categoryTypeFilter,
+                name: { $regex: new RegExp(`^${nameVal}$`, 'i') },
+                ...(parentId !== undefined ? { parentCategory: parentId } : {})
+              });
+              if (!doc) {
+                doc = new Category({
+                  name: nameVal,
+                  parentCategory: parentId ?? null,
+                  type: 'product'
+                });
+                await doc.save();
+              }
+              return doc;
+            };
 
             let catDoc = null;
             let subCatDoc = null;
             let nestedCatDoc = null;
 
-            if (catName) {
-              catDoc = await Category.findOne({ ...categoryTypeFilter, name: { $regex: new RegExp(`^${catName}$`, 'i') }, parentCategory: null });
-              if (!catDoc) {
-                catDoc = new Category({ name: catName, parentCategory: null, type: 'product' });
-                await catDoc.save();
-              }
-            }
+            catDoc = await findCategoryByCodeOrName({
+              code: catCode,
+              name: catName,
+              parentId: null,
+              mustExistIfCode: true
+            });
 
-            if (subCatName) {
-              subCatDoc = await Category.findOne({
-                ...categoryTypeFilter,
-                name: { $regex: new RegExp(`^${subCatName}$`, 'i') },
-                parentCategory: catDoc ? catDoc._id : { $ne: null }
-              });
-              if (!subCatDoc) {
-                subCatDoc = new Category({
-                  name: subCatName,
-                  parentCategory: catDoc ? catDoc._id : null,
-                  type: 'product'
-                });
-                await subCatDoc.save();
-              }
-            }
+            subCatDoc = await findCategoryByCodeOrName({
+              code: subCode,
+              name: subCatName,
+              parentId: catDoc ? catDoc._id : undefined,
+              mustExistIfCode: true
+            });
 
-            if (nestedCatName) {
-              nestedCatDoc = await Category.findOne({
-                ...categoryTypeFilter,
-                name: { $regex: new RegExp(`^${nestedCatName}$`, 'i') },
-                parentCategory: subCatDoc ? subCatDoc._id : { $ne: null }
-              });
-              if (!nestedCatDoc) {
-                nestedCatDoc = new Category({
-                  name: nestedCatName,
-                  parentCategory: subCatDoc ? subCatDoc._id : null,
-                  type: 'product'
-                });
-                await nestedCatDoc.save();
-              }
-            }
+            nestedCatDoc = await findCategoryByCodeOrName({
+              code: nestedCode,
+              name: nestedCatName,
+              parentId: subCatDoc ? subCatDoc._id : undefined,
+              mustExistIfCode: true
+            });
 
             if (!catDoc && subCatDoc) {
               if (subCatDoc.parentCategory) {
@@ -493,8 +525,11 @@ exports.getTemplate = async (req, res) => {
     let headers = [
       'Name',
       'Description',
+      'CategoryCode',
       'Category',
+      'SubCategoryCode',
       'SubCategory',
+      'NestedCategoryCode',
       'NestedCategory',
       'Space',
       'Style',
@@ -537,8 +572,11 @@ exports.getTemplate = async (req, res) => {
     const exampleData = {
       'Name': 'Premium Business Cards',
       'Description': 'High quality matte finish cards',
+      'CategoryCode': '1001',
       'Category': 'Business Cards',
+      'SubCategoryCode': '1101',
       'SubCategory': 'Premium Cards',
+      'NestedCategoryCode': '1111',
       'NestedCategory': 'Textured Cards',
       'Space': 'Living Room',
       'Style': 'Modern Luxury',
