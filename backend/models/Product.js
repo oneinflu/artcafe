@@ -7,6 +7,7 @@ const ProductSchema = new mongoose.Schema({
   compareAtPrice: { type: Number },
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
   subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
+  nestedCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
   space: { type: mongoose.Schema.Types.ObjectId, ref: 'Space' },
   style: { type: mongoose.Schema.Types.ObjectId, ref: 'Style' },
   discoverCollection: { type: mongoose.Schema.Types.ObjectId, ref: 'Collection' },

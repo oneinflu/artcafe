@@ -15,6 +15,7 @@ exports.getProducts = async (req, res) => {
     const products = await Product.find({ isExclusive: { $ne: true }, isRental: { $ne: true } })
       .populate('category')
       .populate('subCategory')
+      .populate('nestedCategory')
       .populate('attributes.group')
       .populate('artist')
       .populate('space')
@@ -32,6 +33,7 @@ exports.getExclusiveProducts = async (req, res) => {
     const products = await Product.find({ isExclusive: true, isRental: { $ne: true } })
       .populate('category')
       .populate('subCategory')
+      .populate('nestedCategory')
       .populate('attributes.group')
       .populate('artist')
       .populate('space')
@@ -64,6 +66,7 @@ exports.getProduct = async (req, res) => {
       product = await Product.findById(idOrSlug)
         .populate('category')
         .populate('subCategory')
+        .populate('nestedCategory')
         .populate('attributes.group')
         .populate('artist')
         .populate('space')
@@ -76,6 +79,7 @@ exports.getProduct = async (req, res) => {
       const allProducts = await Product.find()
         .populate('category')
         .populate('subCategory')
+        .populate('nestedCategory')
         .populate('attributes.group')
         .populate('artist')
         .populate('space')
@@ -111,6 +115,7 @@ exports.createProduct = async (req, res) => {
     product = await Product.findById(product._id)
       .populate('category')
       .populate('subCategory')
+      .populate('nestedCategory')
       .populate('attributes.group')
       .populate('artist')
       .populate('space')
@@ -152,6 +157,7 @@ exports.updateProduct = async (req, res) => {
     const product = await Product.findByIdAndUpdate(req.params.id, data, { new: true })
       .populate('category')
       .populate('subCategory')
+      .populate('nestedCategory')
       .populate('attributes.group')
       .populate('artist')
       .populate('space')
@@ -233,17 +239,21 @@ exports.bulkUploadProducts = async (req, res) => {
 
           if (!name || basePriceValue === undefined) continue;
 
-          // Find or Create Category & Subcategory
+          const categoryTypeFilter = { $or: [{ type: 'product' }, { type: { $exists: false } }] };
+
+          // Find or Create Category, SubCategory, NestedCategory
           const subCatName = row.subcategory || row.sub_category;
+          const nestedCatName = row.nestedcategory || row.nested_category;
           const catName = row.category;
 
           let catDoc = null;
           let subCatDoc = null;
+          let nestedCatDoc = null;
 
           if (catName?.trim()) {
-            catDoc = await Category.findOne({ name: { $regex: new RegExp(`^${catName.trim()}$`, 'i') }, parentCategory: null });
+            catDoc = await Category.findOne({ ...categoryTypeFilter, name: { $regex: new RegExp(`^${catName.trim()}$`, 'i') }, parentCategory: null });
             if (!catDoc) {
-              catDoc = new Category({ name: catName.trim(), parentCategory: null });
+              catDoc = new Category({ name: catName.trim(), parentCategory: null, type: 'product' });
               await catDoc.save();
               console.log(`Bulk Upload: Created new Parent Category "${catName.trim()}"`);
             }
@@ -251,16 +261,35 @@ exports.bulkUploadProducts = async (req, res) => {
 
           if (subCatName?.trim()) {
             subCatDoc = await Category.findOne({ 
+              ...categoryTypeFilter,
               name: { $regex: new RegExp(`^${subCatName.trim()}$`, 'i') },
               parentCategory: catDoc ? catDoc._id : { $ne: null }
             });
             if (!subCatDoc) {
               subCatDoc = new Category({ 
                 name: subCatName.trim(), 
-                parentCategory: catDoc ? catDoc._id : null
+                parentCategory: catDoc ? catDoc._id : null,
+                type: 'product'
               });
               await subCatDoc.save();
               console.log(`Bulk Upload: Created new Sub Category "${subCatName.trim()}" under Parent "${catDoc ? catDoc.name : 'None'}"`);
+            }
+          }
+
+          if (nestedCatName?.trim()) {
+            nestedCatDoc = await Category.findOne({
+              ...categoryTypeFilter,
+              name: { $regex: new RegExp(`^${nestedCatName.trim()}$`, 'i') },
+              parentCategory: subCatDoc ? subCatDoc._id : { $ne: null }
+            });
+            if (!nestedCatDoc) {
+              nestedCatDoc = new Category({
+                name: nestedCatName.trim(),
+                parentCategory: subCatDoc ? subCatDoc._id : null,
+                type: 'product'
+              });
+              await nestedCatDoc.save();
+              console.log(`Bulk Upload: Created new Nested Category "${nestedCatName.trim()}" under Parent "${subCatDoc ? subCatDoc.name : 'None'}"`);
             }
           }
 
@@ -271,6 +300,15 @@ exports.bulkUploadProducts = async (req, res) => {
               catDoc = subCatDoc;
               subCatDoc = null;
             }
+          }
+
+          if (!subCatDoc && nestedCatDoc) {
+            if (nestedCatDoc.parentCategory) {
+              subCatDoc = await Category.findById(nestedCatDoc.parentCategory);
+            }
+          }
+          if (!catDoc && subCatDoc?.parentCategory) {
+            catDoc = await Category.findById(subCatDoc.parentCategory);
           }
           
           if (!catDoc) {
@@ -367,6 +405,7 @@ exports.bulkUploadProducts = async (req, res) => {
             inventory: parseInt(row.inventory || row.stock || 0),
             category: catDoc._id,
             subCategory: subCatDoc?._id || null,
+            nestedCategory: nestedCatDoc?._id || null,
             space: spaceDoc?._id,
             style: styleDoc?._id,
             discoverCollection: collectionDoc?._id,
@@ -432,6 +471,7 @@ exports.getTemplate = async (req, res) => {
       'CompareAtPrice',
       'Category',
       'SubCategory',
+      'NestedCategory',
       'Space',
       'Style',
       'Collection',
@@ -478,6 +518,7 @@ exports.getTemplate = async (req, res) => {
       'CompareAtPrice': '599',
       'Category': 'Business Cards',
       'SubCategory': 'Premium Cards',
+      'NestedCategory': 'Textured Cards',
       'Space': 'Living Room',
       'Style': 'Modern Luxury',
       'Collection': 'New Arrivals',
@@ -531,6 +572,7 @@ exports.getRentalProducts = async (req, res) => {
     const products = await Product.find({ isRental: true })
       .populate('category')
       .populate('subCategory')
+      .populate('nestedCategory')
       .populate('artist')
       .populate('space')
       .populate('style')
@@ -551,6 +593,7 @@ exports.getRentalTemplate = async (req, res) => {
       'CompareAtPrice',
       'Category',
       'SubCategory',
+      'NestedCategory',
       'Space',
       'Style',
       'Collection',
@@ -578,6 +621,7 @@ exports.getRentalTemplate = async (req, res) => {
       'CompareAtPrice': '30000',
       'Category': 'Art Prints',
       'SubCategory': 'Heritage Landscapes',
+      'NestedCategory': 'Temple Series',
       'Space': 'Living Room',
       'Style': 'Quiet Luxury',
       'Collection': 'Best Sellers',
@@ -665,32 +709,54 @@ exports.bulkUploadRentalProducts = async (req, res) => {
 
           if (!name || basePriceValue === undefined) continue;
 
-          // Find or Create Category & Subcategory
+          const categoryTypeFilter = { $or: [{ type: 'product' }, { type: { $exists: false } }] };
+
+          // Find or Create Category, SubCategory, NestedCategory
           const subCatName = row.subcategory || row.sub_category;
+          const nestedCatName = row.nestedcategory || row.nested_category;
           const catName = row.category;
 
           let catDoc = null;
           let subCatDoc = null;
+          let nestedCatDoc = null;
 
           if (catName?.trim()) {
-            catDoc = await Category.findOne({ name: { $regex: new RegExp(`^${catName.trim()}$`, 'i') }, parentCategory: null });
+            catDoc = await Category.findOne({ ...categoryTypeFilter, name: { $regex: new RegExp(`^${catName.trim()}$`, 'i') }, parentCategory: null });
             if (!catDoc) {
-              catDoc = new Category({ name: catName.trim(), parentCategory: null });
+              catDoc = new Category({ name: catName.trim(), parentCategory: null, type: 'product' });
               await catDoc.save();
             }
           }
 
           if (subCatName?.trim()) {
             subCatDoc = await Category.findOne({ 
+              ...categoryTypeFilter,
               name: { $regex: new RegExp(`^${subCatName.trim()}$`, 'i') },
               parentCategory: catDoc ? catDoc._id : { $ne: null }
             });
             if (!subCatDoc) {
               subCatDoc = new Category({ 
                 name: subCatName.trim(), 
-                parentCategory: catDoc ? catDoc._id : null
+                parentCategory: catDoc ? catDoc._id : null,
+                type: 'product'
               });
               await subCatDoc.save();
+            }
+          }
+
+          if (nestedCatName?.trim()) {
+            nestedCatDoc = await Category.findOne({
+              ...categoryTypeFilter,
+              name: { $regex: new RegExp(`^${nestedCatName.trim()}$`, 'i') },
+              parentCategory: subCatDoc ? subCatDoc._id : { $ne: null }
+            });
+            if (!nestedCatDoc) {
+              nestedCatDoc = new Category({
+                name: nestedCatName.trim(),
+                parentCategory: subCatDoc ? subCatDoc._id : null,
+                type: 'product'
+              });
+              await nestedCatDoc.save();
             }
           }
 
@@ -701,6 +767,15 @@ exports.bulkUploadRentalProducts = async (req, res) => {
               catDoc = subCatDoc;
               subCatDoc = null;
             }
+          }
+
+          if (!subCatDoc && nestedCatDoc) {
+            if (nestedCatDoc.parentCategory) {
+              subCatDoc = await Category.findById(nestedCatDoc.parentCategory);
+            }
+          }
+          if (!catDoc && subCatDoc?.parentCategory) {
+            catDoc = await Category.findById(subCatDoc.parentCategory);
           }
           
           if (!catDoc) continue;
@@ -755,6 +830,7 @@ exports.bulkUploadRentalProducts = async (req, res) => {
             inventory: parseInt(row.inventory || row.stock || 0),
             category: catDoc._id,
             subCategory: subCatDoc?._id || null,
+            nestedCategory: nestedCatDoc?._id || null,
             space: spaceDoc?._id,
             style: styleDoc?._id,
             discoverCollection: collectionDoc?._id,

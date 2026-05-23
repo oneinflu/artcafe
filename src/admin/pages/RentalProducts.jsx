@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { resolveImageUrl } from '../../utils/helpers';
-import BASE_URL, { apiFetch } from '../../api';
+import { apiFetch } from '../../api';
 import BulkUpload from '../components/BulkUpload';
 
 const RentalProducts = () => {
@@ -26,6 +26,7 @@ const RentalProducts = () => {
     compareAtPrice: '',
     category: '',
     subCategory: '',
+    nestedCategory: '',
     space: '',
     style: '',
     discoverCollection: '',
@@ -48,15 +49,6 @@ const RentalProducts = () => {
     images: [],
     existingImages: []
   });
-
-  useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-    fetchSpaces();
-    fetchStyles();
-    fetchCollections();
-    fetchArtists();
-  }, []);
 
   // --- Auto Calculator Effect ---
   useEffect(() => {
@@ -88,20 +80,29 @@ const RentalProducts = () => {
   };
 
   const fetchCategories = async () => {
-    try { const data = await apiFetch('/categories'); setCategories(data); } catch (err) {}
+    try { const data = await apiFetch('/categories?type=product'); setCategories(data); } catch (err) { console.error(err); }
   };
   const fetchSpaces = async () => {
-    try { const data = await apiFetch('/spaces'); setSpaces(data); } catch (err) {}
+    try { const data = await apiFetch('/spaces'); setSpaces(data); } catch (err) { console.error(err); }
   };
   const fetchStyles = async () => {
-    try { const data = await apiFetch('/styles'); setStyles(data); } catch (err) {}
+    try { const data = await apiFetch('/styles'); setStyles(data); } catch (err) { console.error(err); }
   };
   const fetchCollections = async () => {
-    try { const data = await apiFetch('/collections'); setCollections(data); } catch (err) {}
+    try { const data = await apiFetch('/collections'); setCollections(data); } catch (err) { console.error(err); }
   };
   const fetchArtists = async () => {
-    try { const data = await apiFetch('/artists'); setArtists(data); } catch (err) {}
+    try { const data = await apiFetch('/artists'); setArtists(data); } catch (err) { console.error(err); }
   };
+
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+    fetchSpaces();
+    fetchStyles();
+    fetchCollections();
+    fetchArtists();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -153,6 +154,7 @@ const RentalProducts = () => {
       compareAtPrice: product.compareAtPrice || '',
       category: product.category?._id || product.category || '',
       subCategory: product.subCategory?._id || product.subCategory || '',
+      nestedCategory: product.nestedCategory?._id || product.nestedCategory || '',
       space: product.space?._id || product.space || '',
       style: product.style?._id || product.style || '',
       discoverCollection: product.discoverCollection?._id || product.discoverCollection || '',
@@ -180,7 +182,12 @@ const RentalProducts = () => {
   };
 
   const rootCategories = categories.filter(c => !c.parentCategory && c.type !== 'blog');
-  const subCategories = formData.category ? categories.filter(c => c.parentCategory === formData.category) : [];
+  const subCategories = formData.category
+    ? categories.filter(c => (c.parentCategory?._id || c.parentCategory) === formData.category)
+    : [];
+  const nestedCategories = formData.subCategory
+    ? categories.filter(c => (c.parentCategory?._id || c.parentCategory) === formData.subCategory)
+    : [];
 
   return (
     <div className="admin-page">
@@ -200,7 +207,7 @@ const RentalProducts = () => {
             setProfitPercent(5);
             setFormData({
               name: '', description: '', basePrice: '', compareAtPrice: '',
-              category: '', subCategory: '', space: '', style: '',
+              category: '', subCategory: '', nestedCategory: '', space: '', style: '',
               discoverCollection: '', artist: '', sku: '', inventory: 0, displayOrder: 0,
               isRental: true, rentalDepositPercent: 30, rentalDepositValue: '', rentalPrice3M: '', rentalPrice6M: '', rentalPrice9M: '',
               fixedSize: '', fixedFrame: '', fixedFrameColor: '', fixedMount: '', fixedMountColor: '', fixedGlaze: '',
@@ -286,7 +293,7 @@ const RentalProducts = () => {
 
                 <div className="form-group">
                   <label>Category (Root)</label>
-                  <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value, subCategory: '' })}>
+                  <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value, subCategory: '', nestedCategory: '' })}>
                     <option value="">Select Category</option>
                     {rootCategories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                   </select>
@@ -294,9 +301,17 @@ const RentalProducts = () => {
                 
                 <div className="form-group">
                   <label>Sub Category</label>
-                  <select value={formData.subCategory} onChange={e => setFormData({ ...formData, subCategory: e.target.value })} disabled={subCategories.length === 0}>
+                  <select value={formData.subCategory} onChange={e => setFormData({ ...formData, subCategory: e.target.value, nestedCategory: '' })} disabled={subCategories.length === 0}>
                     <option value="">Select Sub Category</option>
                     {subCategories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Nested Category</label>
+                  <select value={formData.nestedCategory} onChange={e => setFormData({ ...formData, nestedCategory: e.target.value })} disabled={nestedCategories.length === 0}>
+                    <option value="">Select Nested Category</option>
+                    {nestedCategories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                   </select>
                 </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { resolveImageUrl } from '../../utils/helpers';
 import BASE_URL, { apiFetch } from '../../api';
 import BulkUpload from '../components/BulkUpload';
@@ -24,6 +24,7 @@ const ExclusiveProducts = () => {
     compareAtPrice: '',
     category: '',
     subCategory: '',
+    nestedCategory: '',
     space: '',
     style: '',
     discoverCollection: '',
@@ -35,16 +36,6 @@ const ExclusiveProducts = () => {
     images: [],
     attributes: []
   });
-
-  useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-    fetchSpaces();
-    fetchStyles();
-    fetchCollections();
-    fetchArtists();
-    fetchAttributeGroups();
-  }, []);
 
   const fetchProducts = async () => {
     try {
@@ -59,7 +50,7 @@ const ExclusiveProducts = () => {
 
   const fetchCategories = async () => {
     try {
-      const data = await apiFetch('/categories');
+      const data = await apiFetch('/categories?type=product');
       setCategories(data);
     } catch (err) {
       console.error("Error fetching categories:", err);
@@ -110,6 +101,16 @@ const ExclusiveProducts = () => {
       console.error("Error fetching attributes:", err);
     }
   };
+
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+    fetchSpaces();
+    fetchStyles();
+    fetchCollections();
+    fetchArtists();
+    fetchAttributeGroups();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -166,6 +167,7 @@ const ExclusiveProducts = () => {
       compareAtPrice: p.compareAtPrice || '',
       category: p.category?._id || p.category || '',
       subCategory: p.subCategory?._id || p.subCategory || '',
+      nestedCategory: p.nestedCategory?._id || p.nestedCategory || '',
       space: p.space?._id || p.space || '',
       style: p.style?._id || p.style || '',
       discoverCollection: p.discoverCollection?._id || p.discoverCollection || '',
@@ -194,6 +196,7 @@ const ExclusiveProducts = () => {
       compareAtPrice: '',
       category: '',
       subCategory: '',
+      nestedCategory: '',
       space: '',
       style: '',
       discoverCollection: '',
@@ -304,6 +307,7 @@ const ExclusiveProducts = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <span className="status-pill delivered">{p.category?.name || 'Uncategorized'}</span>
                       {p.subCategory?.name && <span className="status-pill delivered" style={{ fontSize: '0.7rem', opacity: 0.8 }}>Sub: {p.subCategory.name}</span>}
+                      {p.nestedCategory?.name && <span className="status-pill delivered" style={{ fontSize: '0.7rem', opacity: 0.8 }}>Nested: {p.nestedCategory.name}</span>}
                       {p.space?.name && <span className="status-pill processing" style={{ fontSize: '0.7rem' }}>Space: {p.space.name}</span>}
                       {p.style?.name && <span className="status-pill shipped" style={{ fontSize: '0.7rem' }}>Style: {p.style.name}</span>}
                     </div>
@@ -456,7 +460,7 @@ const ExclusiveProducts = () => {
                    <label>Category</label>
                    <select 
                      value={formData.category} 
-                     onChange={e => setFormData({ ...formData, category: e.target.value, subCategory: '' })} 
+                     onChange={e => setFormData({ ...formData, category: e.target.value, subCategory: '', nestedCategory: '' })} 
                      required
                    >
                      <option value="">Select Category</option>
@@ -468,12 +472,27 @@ const ExclusiveProducts = () => {
                    <label>Sub Category</label>
                    <select 
                      value={formData.subCategory} 
-                     onChange={e => setFormData({ ...formData, subCategory: e.target.value })}
+                     onChange={e => setFormData({ ...formData, subCategory: e.target.value, nestedCategory: '' })}
                      disabled={!formData.category}
                    >
                      <option value="">Select Sub Category (Optional)</option>
                      {categories
                        .filter(c => c.parentCategory && (c.parentCategory._id === formData.category || c.parentCategory === formData.category))
+                       .map(c => <option key={c._id} value={c._id}>{c.name}</option>)
+                     }
+                   </select>
+                 </div>
+
+                 <div className="form-group">
+                   <label>Nested Category</label>
+                   <select
+                     value={formData.nestedCategory}
+                     onChange={e => setFormData({ ...formData, nestedCategory: e.target.value })}
+                     disabled={!formData.subCategory}
+                   >
+                     <option value="">Select Nested Category (Optional)</option>
+                     {categories
+                       .filter(c => c.parentCategory && (c.parentCategory._id === formData.subCategory || c.parentCategory === formData.subCategory))
                        .map(c => <option key={c._id} value={c._id}>{c.name}</option>)
                      }
                    </select>
