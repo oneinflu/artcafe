@@ -110,6 +110,28 @@ exports.createProduct = async (req, res) => {
     }
     data.images = [...existingImages, ...fileUrls];
     if (typeof data.attributes === 'string') data.attributes = JSON.parse(data.attributes);
+
+    const normalizeRequiredObjectId = (value) => {
+      if (value === undefined || value === null) return undefined;
+      const raw = String(value).trim();
+      if (!raw || raw === 'null' || raw === 'undefined') return undefined;
+      return raw;
+    };
+    const normalizeOptionalObjectId = (value) => {
+      if (value === undefined || value === null) return null;
+      const raw = String(value).trim();
+      if (!raw || raw === 'null' || raw === 'undefined') return null;
+      return raw;
+    };
+
+    data.category = normalizeRequiredObjectId(data.category);
+    data.subCategory = normalizeOptionalObjectId(data.subCategory);
+    data.nestedCategory = normalizeOptionalObjectId(data.nestedCategory);
+    data.space = normalizeOptionalObjectId(data.space);
+    data.style = normalizeOptionalObjectId(data.style);
+    data.discoverCollection = normalizeOptionalObjectId(data.discoverCollection);
+    data.artist = normalizeOptionalObjectId(data.artist);
+
     const newProduct = new Product(data);
     let product = await newProduct.save();
     product = await Product.findById(product._id)
@@ -154,10 +176,25 @@ exports.updateProduct = async (req, res) => {
     
     delete data.clearImages;
     if (typeof data.attributes === 'string') data.attributes = JSON.parse(data.attributes);
+
+    const normalizeOptionalObjectId = (value) => {
+      if (value === undefined || value === null) return null;
+      const raw = String(value).trim();
+      if (!raw || raw === 'null' || raw === 'undefined') return null;
+      return raw;
+    };
+
+    if (data.subCategory !== undefined) data.subCategory = normalizeOptionalObjectId(data.subCategory);
+    if (data.nestedCategory !== undefined) data.nestedCategory = normalizeOptionalObjectId(data.nestedCategory);
+    if (data.space !== undefined) data.space = normalizeOptionalObjectId(data.space);
+    if (data.style !== undefined) data.style = normalizeOptionalObjectId(data.style);
+    if (data.discoverCollection !== undefined) data.discoverCollection = normalizeOptionalObjectId(data.discoverCollection);
+    if (data.artist !== undefined) data.artist = normalizeOptionalObjectId(data.artist);
     const product = await Product.findByIdAndUpdate(req.params.id, data, { new: true })
       .populate('category')
       .populate('subCategory')
       .populate('nestedCategory')
+      .populate('attributes.group')
       .populate('attributes.group')
       .populate('artist')
       .populate('space')
