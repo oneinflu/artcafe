@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const CategorySchema = new mongoose.Schema({
   codeNumber: { type: String },
+  isActive: { type: Boolean, default: true },
   name: { type: String, required: true },
   type: { type: String, enum: ['product', 'blog'], default: 'product' },
   description: { type: String },

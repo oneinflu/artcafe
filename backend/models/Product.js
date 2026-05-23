@@ -5,6 +5,7 @@ const ProductSchema = new mongoose.Schema({
   description: { type: String },
   basePrice: { type: Number, required: true },
   compareAtPrice: { type: Number },
+  isActive: { type: Boolean, default: true },
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
   subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
   nestedCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },

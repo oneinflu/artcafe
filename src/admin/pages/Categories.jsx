@@ -3,6 +3,8 @@ import BASE_URL, { apiFetch } from '../../api';
 import BulkUpload from '../components/BulkUpload';
 import { useLocation } from 'react-router-dom';
 
+const ROOT_CODE_START = 1;
+
 const Categories = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
@@ -25,6 +27,7 @@ const Categories = () => {
   const [subParentId, setSubParentId] = useState('');
   const [formData, setFormData] = useState({ 
     codeNumber: '',
+    isActive: true,
     name: '', 
     description: '', 
     parentCategory: '', 
@@ -41,12 +44,23 @@ const Categories = () => {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const data = await apiFetch(`/categories?type=${activeTab}`);
+      const data = await apiFetch(`/categories?type=${activeTab}&includeInactive=true`);
       setCategories(data);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching categories:", err);
       setLoading(false);
+    }
+  };
+
+  const toggleActive = async (categoryId, nextActive) => {
+    try {
+      const fd = new FormData();
+      fd.append('isActive', nextActive ? 'true' : 'false');
+      await apiFetch(`/categories/${categoryId}`, { method: 'PUT', body: fd });
+      fetchCategories();
+    } catch (err) {
+      alert("Error updating status: " + err.message);
     }
   };
 
@@ -83,12 +97,11 @@ const Categories = () => {
     const endpoint = editCategory ? `/categories/${editCategory._id}` : '/categories';
     const method = editCategory ? 'PUT' : 'POST';
 
-    const codeVal = String(formData.codeNumber || '').trim();
-    const codeNum = parseInt(codeVal, 10);
-    const inferredDisplayOrder = Number.isFinite(codeNum) ? codeNum : 0;
+    const inferredDisplayOrder = 0;
 
     const fd = new FormData();
     fd.append('codeNumber', formData.codeNumber || '');
+    fd.append('isActive', formData.isActive !== false ? 'true' : 'false');
     fd.append('name', formData.name);
     fd.append('description', formData.description || '');
     fd.append('parentCategory', formData.parentCategory || '');
@@ -146,6 +159,43 @@ const Categories = () => {
     }
   };
 
+  const rootCategories = categories.filter(c => !c.parentCategory);
+
+  const categoriesById = new Map(categories.map(c => [c._id, c]));
+
+  function getNextRootCode(type) {
+    const max = categories
+      .filter(c => !c.parentCategory && (c.type || type) === type)
+      .map(c => String(c.codeNumber || '').trim())
+      .map(code => {
+        const parts = code.split('-').map(p => p.trim()).filter(Boolean);
+        if (parts.length !== 1) return NaN;
+        return parseInt(parts[0], 10);
+      })
+      .filter(n => Number.isFinite(n) && n >= ROOT_CODE_START)
+      .reduce((acc, n) => Math.max(acc, n), ROOT_CODE_START - 1);
+    return String(max + 1);
+  }
+
+  function getNextChildCode(parentId) {
+    const parent = categoriesById.get(parentId);
+    const prefix = String(parent?.codeNumber || '').trim();
+    if (!prefix) return '';
+    const maxSuffix = categories
+      .filter(c => String(c.parentCategory?._id || c.parentCategory || '') === String(parentId))
+      .map(c => String(c.codeNumber || '').trim())
+      .map(code => {
+        const parts = code.split('-').map(p => p.trim()).filter(Boolean);
+        if (parts.length < 2) return NaN;
+        const childPrefix = parts.slice(0, -1).join('-');
+        if (childPrefix !== prefix) return NaN;
+        return parseInt(parts[parts.length - 1], 10);
+      })
+      .filter(n => Number.isFinite(n))
+      .reduce((acc, n) => Math.max(acc, n), 0);
+    return `${prefix}-${maxSuffix + 1}`;
+  }
+
   const openEdit = (c) => {
     setEditCategory(c);
     setImageFile(null);
@@ -169,6 +219,7 @@ const Categories = () => {
     }
     setFormData({
       codeNumber: c.codeNumber || '',
+      isActive: c.isActive !== false,
       name: c.name || '',
       description: c.description || '',
       parentCategory: c.parentCategory?._id || c.parentCategory || '',
@@ -185,29 +236,43 @@ const Categories = () => {
     setCategoryLevel('root');
     setRootParentId('');
     setSubParentId('');
-
-    const maxCode = categories
-      .filter(c => (c.type || activeTab) === activeTab)
-      .map(c => parseInt(String(c.codeNumber || '').trim(), 10))
-      .filter(n => Number.isFinite(n))
-      .reduce((acc, n) => Math.max(acc, n), 1000);
-    const nextCode = String(maxCode + 1);
+    const nextCode = getNextRootCode(activeTab);
 
     setFormData({ 
       codeNumber: nextCode,
+      isActive: true,
       name: '', 
       description: '', 
       parentCategory: '', 
       image: '', 
-      displayOrder: parseInt(nextCode, 10),
+      displayOrder: 0,
       type: activeTab 
     });
     setShowModal(true);
   };
 
-  const rootCategories = categories.filter(c => !c.parentCategory);
-
-  const categoriesById = new Map(categories.map(c => [c._id, c]));
+  useEffect(() => {
+    if (!showModal || editCategory) return;
+    const type = formData.type || activeTab;
+    if (categoryLevel === 'root') {
+      const codeNumber = getNextRootCode(type);
+      setFormData(prev => (prev.codeNumber === codeNumber ? prev : { ...prev, codeNumber, displayOrder: 0 }));
+      return;
+    }
+    if (categoryLevel === 'sub') {
+      if (!rootParentId) return;
+      const codeNumber = getNextChildCode(rootParentId);
+      if (!codeNumber) return;
+      setFormData(prev => (prev.codeNumber === codeNumber ? prev : { ...prev, codeNumber, displayOrder: 0 }));
+      return;
+    }
+    if (categoryLevel === 'nested') {
+      if (!subParentId) return;
+      const codeNumber = getNextChildCode(subParentId);
+      if (!codeNumber) return;
+      setFormData(prev => (prev.codeNumber === codeNumber ? prev : { ...prev, codeNumber, displayOrder: 0 }));
+    }
+  }, [showModal, editCategory, categoryLevel, rootParentId, subParentId, formData.type, activeTab, categories]);
   const getDepth = (category) => {
     const parentId = category?.parentCategory?._id || category?.parentCategory;
     if (!parentId) return 0;
@@ -397,8 +462,8 @@ const Categories = () => {
             All Categories ({categories.length})
           </button>
           {rootCategories.map(rc => {
-            const childrenCount = categories.filter(c => {
-              return getRootAncestorId(c) === rc._id || c._id === rc._id;
+            const nestedCount = categories.filter(c => {
+              return getDepth(c) === 2 && getRootAncestorId(c) === rc._id;
             }).length;
 
             return (
@@ -420,7 +485,7 @@ const Categories = () => {
                   flexShrink: 0
                 }}
               >
-                {rc.name} ({childrenCount})
+                {rc.name} ({nestedCount})
               </button>
             );
           })}
@@ -438,6 +503,7 @@ const Categories = () => {
                 <th style={{ width: '110px' }}>Code</th>
                 <th>Category</th>
                 <th style={{ width: '220px' }}>Level</th>
+                <th style={{ width: '90px' }}>Active</th>
                 <th style={{ width: '110px' }}>Actions</th>
               </tr>
             </thead>
@@ -484,6 +550,13 @@ const Categories = () => {
                     })()}
                   </td>
                   <td>
+                    <input
+                      type="checkbox"
+                      checked={c.isActive !== false}
+                      onChange={(e) => toggleActive(c._id, e.target.checked)}
+                    />
+                  </td>
+                  <td>
                     <button className="btn-icon" onClick={() => openEdit(c)}>✏️</button>
                     <button className="btn-icon delete" onClick={() => handleDelete(c._id)}>🗑️</button>
                   </td>
@@ -491,7 +564,7 @@ const Categories = () => {
               ))}
               {visibleCategories.length === 0 && (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
                     No {activeTab} categories found.
                   </td>
                 </tr>
@@ -509,12 +582,24 @@ const Categories = () => {
               <div className="form-row">
                 <div className="form-group">
                   <label>Code Number</label>
-                  <input type="text" value={formData.codeNumber} onChange={e => setFormData({ ...formData, codeNumber: e.target.value })} placeholder="e.g. 1111" />
+                  <input type="text" value={formData.codeNumber} readOnly style={{ background: '#f7f7f7' }} />
                 </div>
                 <div className="form-group">
                   <label>Category Name</label>
                   <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label>Active</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.isActive !== false}
+                    onChange={e => setFormData({ ...formData, isActive: e.target.checked })}
+                  />
+                  {formData.isActive !== false ? 'Active' : 'Inactive'}
+                </label>
               </div>
 
               <div className="form-group">

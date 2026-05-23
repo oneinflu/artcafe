@@ -39,6 +39,7 @@ const RentalProducts = () => {
     sku: '',
     inventory: 0,
     displayOrder: 0,
+    isActive: true,
     isRental: true,
     rentalDepositPercent: 30, // Default 30% as requested
     rentalDepositValue: '', // Actual calculated value in INR
@@ -75,7 +76,7 @@ const RentalProducts = () => {
 
   const fetchProducts = async () => {
     try {
-      const data = await apiFetch('/products/rentals');
+      const data = await apiFetch('/products/rentals?includeInactive=true');
       setProducts(data);
       setLoading(false);
     } catch (err) {
@@ -85,7 +86,7 @@ const RentalProducts = () => {
   };
 
   const fetchCategories = async () => {
-    try { const data = await apiFetch('/categories?type=product'); setCategories(data); } catch (err) { console.error(err); }
+    try { const data = await apiFetch('/categories?type=product&includeInactive=true'); setCategories(data); } catch (err) { console.error(err); }
   };
   const fetchSpaces = async () => {
     try { const data = await apiFetch('/spaces'); setSpaces(data); } catch (err) { console.error(err); }
@@ -147,6 +148,18 @@ const RentalProducts = () => {
       } catch (err) {
         alert("Error deleting product: " + err.message);
       }
+    }
+  };
+
+  const toggleActive = async (productId, nextActive) => {
+    try {
+      const fd = new FormData();
+      fd.append('isActive', nextActive ? 'true' : 'false');
+      const updated = await apiFetch(`/products/${productId}`, { method: 'PUT', body: fd });
+      setProducts(prev => prev.map(p => (p._id === productId ? updated : p)));
+    } catch (err) {
+      alert("Error updating status: " + err.message);
+      fetchProducts();
     }
   };
 
@@ -238,6 +251,7 @@ const RentalProducts = () => {
       sku: product.sku || '',
       inventory: product.inventory || 0,
       displayOrder: product.displayOrder || 0,
+      isActive: product.isActive !== false,
       isRental: true,
       rentalDepositPercent: product.rentalDepositPercent || 30,
       rentalDepositValue: product.basePrice ? (product.basePrice * ((product.rentalDepositPercent || 30) / 100)).toFixed(0) : '',
@@ -287,7 +301,7 @@ const RentalProducts = () => {
               name: '', description: '', basePrice: '', compareAtPrice: '',
               category: '', subCategory: '', nestedCategory: '', space: '', style: '',
               discoverCollection: '', artist: '', sku: '', inventory: 0, displayOrder: 0,
-              isRental: true, rentalDepositPercent: 30, rentalDepositValue: '', rentalPrice3M: '', rentalPrice6M: '', rentalPrice9M: '',
+              isActive: true, isRental: true, rentalDepositPercent: 30, rentalDepositValue: '', rentalPrice3M: '', rentalPrice6M: '', rentalPrice9M: '',
               fixedSize: '', fixedFrame: '', fixedFrameColor: '', fixedMount: '', fixedMountColor: '', fixedGlaze: '',
               images: [], existingImages: []
             });
@@ -344,6 +358,7 @@ const RentalProducts = () => {
                 <th>3M Rate</th>
                 <th>Size / Frame</th>
                 <th>Stock</th>
+                <th>Active</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -373,6 +388,13 @@ const RentalProducts = () => {
                   </td>
                   <td>{p.inventory}</td>
                   <td>
+                    <input
+                      type="checkbox"
+                      checked={p.isActive !== false}
+                      onChange={e => toggleActive(p._id, e.target.checked)}
+                    />
+                  </td>
+                  <td>
                     <button className="btn-icon" onClick={() => openEditModal(p)}>✏️</button>
                     <button className="btn-icon delete" onClick={() => handleDelete(p._id)}>🗑️</button>
                   </td>
@@ -380,7 +402,7 @@ const RentalProducts = () => {
               ))}
               {visibleProducts.length === 0 && (
                 <tr>
-                  <td colSpan="9" style={{ textAlign: 'center', padding: '30px' }}>No rental products found.</td>
+                  <td colSpan="10" style={{ textAlign: 'center', padding: '30px' }}>No rental products found.</td>
                 </tr>
               )}
             </tbody>
@@ -402,6 +424,12 @@ const RentalProducts = () => {
                 <div className="form-group">
                   <label>SKU</label>
                   <input type="text" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input type="checkbox" checked={formData.isActive} onChange={e => setFormData({ ...formData, isActive: e.target.checked })} />
+                    Active
+                  </label>
                 </div>
 
                 <div className="form-group">

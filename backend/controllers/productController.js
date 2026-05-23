@@ -9,10 +9,26 @@ const Style = require('../models/Style');
 const Collection = require('../models/Collection');
 const fs = require('fs');
 const csv = require('csv-parser');
+const jwt = require('jsonwebtoken');
+
+const isAdminRequest = (req) => {
+  try {
+    const token = req.header('x-auth-token');
+    if (!token) return false;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    return decoded?.user?.role === 'admin';
+  } catch (err) {
+    return false;
+  }
+};
 
 exports.getProducts = async (req, res) => {
   try {
-    const products = await Product.find({ isExclusive: { $ne: true }, isRental: { $ne: true } })
+    const includeInactive = String(req.query.includeInactive || '').toLowerCase() === 'true';
+    const filter = { isExclusive: { $ne: true }, isRental: { $ne: true } };
+    if (!(includeInactive && isAdminRequest(req))) filter.isActive = { $ne: false };
+
+    const products = await Product.find(filter)
       .populate('category')
       .populate('subCategory')
       .populate('nestedCategory')
@@ -30,7 +46,11 @@ exports.getProducts = async (req, res) => {
 
 exports.getExclusiveProducts = async (req, res) => {
   try {
-    const products = await Product.find({ isExclusive: true, isRental: { $ne: true } })
+    const includeInactive = String(req.query.includeInactive || '').toLowerCase() === 'true';
+    const filter = { isExclusive: true, isRental: { $ne: true } };
+    if (!(includeInactive && isAdminRequest(req))) filter.isActive = { $ne: false };
+
+    const products = await Product.find(filter)
       .populate('category')
       .populate('subCategory')
       .populate('nestedCategory')
@@ -61,6 +81,8 @@ exports.getProduct = async (req, res) => {
   try {
     const idOrSlug = req.params.id;
     let product = null;
+    const includeInactive = String(req.query.includeInactive || '').toLowerCase() === 'true';
+    const allowInactive = includeInactive && isAdminRequest(req);
 
     if (mongoose.Types.ObjectId.isValid(idOrSlug)) {
       product = await Product.findById(idOrSlug)
@@ -90,6 +112,9 @@ exports.getProduct = async (req, res) => {
     }
 
     if (!product) {
+      return res.status(404).json({ msg: 'Product not found' });
+    }
+    if (!allowInactive && product.isActive === false) {
       return res.status(404).json({ msg: 'Product not found' });
     }
     res.json(product);
@@ -131,6 +156,10 @@ exports.createProduct = async (req, res) => {
     data.style = normalizeOptionalObjectId(data.style);
     data.discoverCollection = normalizeOptionalObjectId(data.discoverCollection);
     data.artist = normalizeOptionalObjectId(data.artist);
+    if (data.isActive !== undefined) {
+      const v = String(data.isActive).toLowerCase().trim();
+      data.isActive = v !== 'false' && v !== '0' && v !== 'no' && v !== 'n';
+    }
 
     const newProduct = new Product(data);
     let product = await newProduct.save();
@@ -190,6 +219,10 @@ exports.updateProduct = async (req, res) => {
     if (data.style !== undefined) data.style = normalizeOptionalObjectId(data.style);
     if (data.discoverCollection !== undefined) data.discoverCollection = normalizeOptionalObjectId(data.discoverCollection);
     if (data.artist !== undefined) data.artist = normalizeOptionalObjectId(data.artist);
+    if (data.isActive !== undefined) {
+      const v = String(data.isActive).toLowerCase().trim();
+      data.isActive = v !== 'false' && v !== '0' && v !== 'no' && v !== 'n';
+    }
     const product = await Product.findByIdAndUpdate(req.params.id, data, { new: true })
       .populate('category')
       .populate('subCategory')
@@ -442,6 +475,12 @@ exports.bulkUploadProducts = async (req, res) => {
               compareAtPrice: (row.compareatprice || row.sale_price) ? toNumber(row.compareatprice || row.sale_price) : undefined,
               sku,
               inventory: parseInt(row.inventory || row.stock || 0),
+              isActive: (() => {
+                const raw = canon.isactive ?? row.isactive ?? row.active;
+                if (raw === undefined || raw === null || String(raw).trim() === '') return true;
+                const v = String(raw).toLowerCase().trim();
+                return v !== 'false' && v !== '0' && v !== 'no' && v !== 'n';
+              })(),
               category: catDoc._id,
               subCategory: subCatDoc?._id || null,
               nestedCategory: nestedCatDoc?._id || null,
@@ -525,6 +564,7 @@ exports.getTemplate = async (req, res) => {
     let headers = [
       'Name',
       'Description',
+      'IsActive',
       'CategoryCode',
       'Category',
       'SubCategoryCode',
@@ -572,11 +612,12 @@ exports.getTemplate = async (req, res) => {
     const exampleData = {
       'Name': 'Premium Business Cards',
       'Description': 'High quality matte finish cards',
-      'CategoryCode': '1001',
+      'IsActive': 'true',
+      'CategoryCode': '200',
       'Category': 'Business Cards',
-      'SubCategoryCode': '1101',
+      'SubCategoryCode': '200-1',
       'SubCategory': 'Premium Cards',
-      'NestedCategoryCode': '1111',
+      'NestedCategoryCode': '200-1-1',
       'NestedCategory': 'Textured Cards',
       'Space': 'Living Room',
       'Style': 'Modern Luxury',
@@ -627,7 +668,11 @@ exports.getTemplate = async (req, res) => {
 
 exports.getRentalProducts = async (req, res) => {
   try {
-    const products = await Product.find({ isRental: true })
+    const includeInactive = String(req.query.includeInactive || '').toLowerCase() === 'true';
+    const filter = { isRental: true };
+    if (!(includeInactive && isAdminRequest(req))) filter.isActive = { $ne: false };
+
+    const products = await Product.find(filter)
       .populate('category')
       .populate('subCategory')
       .populate('nestedCategory')

@@ -28,6 +28,64 @@ mongoose
         console.log(msg);
       }
     }
+
+    try {
+      const Category = require('./models/Category');
+
+      const sortCategoriesStable = (items) => {
+        return [...items].sort((a, b) => {
+          const ad = Number(a.displayOrder || 0);
+          const bd = Number(b.displayOrder || 0);
+          if (ad !== bd) return ad - bd;
+          const at = new Date(a.createdAt || 0).getTime();
+          const bt = new Date(b.createdAt || 0).getTime();
+          if (at !== bt) return at - bt;
+          return String(a.name || '').localeCompare(String(b.name || ''));
+        });
+      };
+
+      const categories = await Category.find({ type: 'product' })
+        .select('_id parentCategory codeNumber name displayOrder createdAt')
+        .lean();
+
+      const byId = new Map(categories.map(c => [String(c._id), c]));
+      const childrenByParent = new Map();
+      categories.forEach(c => {
+        const parentId = c.parentCategory ? String(c.parentCategory) : null;
+        if (!childrenByParent.has(parentId)) childrenByParent.set(parentId, []);
+        childrenByParent.get(parentId).push(c);
+      });
+
+      const codeForId = new Map();
+
+      const assignCodes = (parentId, parentCode) => {
+        const children = sortCategoriesStable(childrenByParent.get(parentId) || []).filter(ch => byId.has(String(ch._id)));
+        children.forEach((child, idx) => {
+          const code = parentCode ? `${parentCode}-${idx + 1}` : String(idx + 1);
+          const id = String(child._id);
+          codeForId.set(id, code);
+          assignCodes(id, code);
+        });
+      };
+
+      assignCodes(null, '');
+
+      if (codeForId.size) {
+        await Category.updateMany({ type: 'product' }, { $unset: { codeNumber: '' } });
+        await Category.bulkWrite(
+          Array.from(codeForId.entries()).map(([id, code]) => ({
+            updateOne: { filter: { _id: id }, update: { $set: { codeNumber: code } } }
+          })),
+          { ordered: false }
+        );
+        console.log(`Category codes rebuilt: updated ${codeForId.size} categories`);
+      } else {
+        console.log('Category codes rebuilt: no categories found');
+      }
+    } catch (err) {
+      const msg = String(err?.message || '');
+      if (msg) console.log(msg);
+    }
   })
   .catch(err => console.log(err));
 

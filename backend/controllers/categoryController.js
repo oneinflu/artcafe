@@ -2,14 +2,50 @@ const Category = require('../models/Category');
 const fs = require('fs');
 const csv = require('csv-parser');
 
-const nextCategoryCodeNumber = async (type) => {
-  const docs = await Category.find({ type, codeNumber: { $exists: true, $ne: null } }, { codeNumber: 1 });
-  let max = 1000;
-  docs.forEach(d => {
-    const n = parseInt(String(d.codeNumber).trim(), 10);
-    if (Number.isFinite(n) && n > max) max = n;
+const ROOT_CODE_START = 1;
+
+const parseCodeParts = (codeNumber) => {
+  const raw = String(codeNumber || '').trim();
+  if (!raw) return [];
+  return raw.split('-').map(p => p.trim()).filter(Boolean);
+};
+
+const normalizeIsActive = (value) => {
+  if (value === undefined || value === null) return true;
+  const raw = String(value).toLowerCase().trim();
+  if (!raw) return true;
+  return raw !== 'false' && raw !== '0' && raw !== 'no' && raw !== 'n';
+};
+
+const nextRootCodeNumber = async (type) => {
+  const roots = await Category.find({ type, parentCategory: null, codeNumber: { $exists: true, $ne: null } }, { codeNumber: 1 });
+  let max = ROOT_CODE_START - 1;
+  roots.forEach(r => {
+    const parts = parseCodeParts(r.codeNumber);
+    if (parts.length !== 1) return;
+    const n = parseInt(parts[0], 10);
+    if (Number.isFinite(n) && n >= ROOT_CODE_START && n > max) max = n;
   });
   return String(max + 1);
+};
+
+const nextChildCodeNumber = async (parentCategoryId, parentCodeNumber) => {
+  const prefix = String(parentCodeNumber || '').trim();
+  if (!prefix) return null;
+  const children = await Category.find(
+    { parentCategory: parentCategoryId, codeNumber: { $exists: true, $ne: null } },
+    { codeNumber: 1 }
+  );
+  let maxSuffix = 0;
+  children.forEach(c => {
+    const parts = parseCodeParts(c.codeNumber);
+    const childPrefix = parts.slice(0, -1).join('-');
+    if (childPrefix !== prefix) return;
+    const last = parts[parts.length - 1];
+    const n = parseInt(last, 10);
+    if (Number.isFinite(n) && n > maxSuffix) maxSuffix = n;
+  });
+  return `${prefix}-${maxSuffix + 1}`;
 };
 
 exports.getCategories = async (req, res) => {
@@ -25,6 +61,8 @@ exports.getCategories = async (req, res) => {
       }
     }
     
+    const includeInactive = String(req.query.includeInactive || '').toLowerCase() === 'true';
+    if (!includeInactive) filter.isActive = { $ne: false };
     const categories = await Category.find(filter).populate('parentCategory');
     res.json(categories);
   } catch (err) {
@@ -42,16 +80,47 @@ exports.createCategory = async (req, res) => {
       const v = String(categoryData.codeNumber).trim();
       categoryData.codeNumber = v ? v : undefined;
     }
-    if (!categoryData.codeNumber) {
-      categoryData.codeNumber = await nextCategoryCodeNumber(categoryData.type === 'blog' ? 'blog' : 'product');
-    }
-    if (!categoryData.displayOrder || String(categoryData.displayOrder).trim() === '') {
-      const n = parseInt(String(categoryData.codeNumber).trim(), 10);
-      categoryData.displayOrder = Number.isFinite(n) ? n : 0;
-    }
     if (!categoryData.parentCategory || categoryData.parentCategory === "" || categoryData.parentCategory === "null") {
       categoryData.parentCategory = null;
     }
+    if (categoryData.isActive !== undefined) {
+      const v = String(categoryData.isActive).toLowerCase().trim();
+      categoryData.isActive = v !== 'false' && v !== '0' && v !== 'no' && v !== 'n';
+    }
+
+    const type = categoryData.type === 'blog' ? 'blog' : 'product';
+    categoryData.type = type;
+
+    const ensureCategoryHasCode = async (doc) => {
+      if (!doc || doc.codeNumber) return doc;
+      if (!doc.parentCategory) {
+        doc.codeNumber = await nextRootCodeNumber(doc.type);
+        doc.displayOrder = doc.displayOrder || 0;
+        await doc.save();
+        return doc;
+      }
+      const parent = await Category.findById(doc.parentCategory);
+      if (parent && !parent.codeNumber) await ensureCategoryHasCode(parent);
+      doc.codeNumber = await nextChildCodeNumber(doc.parentCategory, parent?.codeNumber);
+      doc.displayOrder = doc.displayOrder || 0;
+      await doc.save();
+      return doc;
+    };
+
+    if (!categoryData.codeNumber) {
+      if (!categoryData.parentCategory) {
+        categoryData.codeNumber = await nextRootCodeNumber(type);
+      } else {
+        const parent = await Category.findById(categoryData.parentCategory);
+        if (!parent) return res.status(400).json({ msg: 'Parent category not found' });
+        await ensureCategoryHasCode(parent);
+        categoryData.codeNumber = await nextChildCodeNumber(parent._id, parent.codeNumber);
+      }
+    }
+    if (!categoryData.displayOrder || String(categoryData.displayOrder).trim() === '') {
+      categoryData.displayOrder = 0;
+    }
+
     const newCategory = new Category(categoryData);
     const category = await newCategory.save();
     res.json(category);
@@ -75,6 +144,10 @@ exports.updateCategory = async (req, res) => {
     // Robust check for empty parent category
     if (!updateData.parentCategory || updateData.parentCategory === "" || updateData.parentCategory === "null") {
       updateData.parentCategory = null;
+    }
+    if (updateData.isActive !== undefined) {
+      const v = String(updateData.isActive).toLowerCase().trim();
+      updateData.isActive = v !== 'false' && v !== '0' && v !== 'no' && v !== 'n';
     }
     
     console.log("Updating category with data:", updateData);
@@ -209,7 +282,7 @@ exports.bulkUploadCategories = async (req, res) => {
           return Category.findOne({ type, name: { $regex: new RegExp(`^${v}$`, 'i') } });
         };
 
-        const upsertCategory = async ({ type, name, codeNumber, parentId, description, displayOrder }) => {
+        const upsertCategory = async ({ type, name, codeNumber, parentId, description, displayOrder, isActive }) => {
           const filter = codeNumber
             ? { type, codeNumber }
             : { type, name, parentCategory: parentId ?? null };
@@ -217,6 +290,7 @@ exports.bulkUploadCategories = async (req, res) => {
             name,
             type,
             parentCategory: parentId ?? null,
+            isActive: isActive !== undefined ? isActive : true,
             description: description || '',
             displayOrder: displayOrder ?? 0
           };
@@ -225,9 +299,59 @@ exports.bulkUploadCategories = async (req, res) => {
         };
 
         const levelOrder = { root: 0, sub: 1, nested: 2 };
-        const nextCodes = {
-          product: parseInt(await nextCategoryCodeNumber('product'), 10),
-          blog: parseInt(await nextCategoryCodeNumber('blog'), 10)
+        const escapeRegExp = (text) => String(text || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rootCounters = {
+          product: parseInt(await nextRootCodeNumber('product'), 10),
+          blog: parseInt(await nextRootCodeNumber('blog'), 10)
+        };
+        const childCounters = new Map(); // parentId => { prefix, nextSuffix }
+
+        const ensureDocHasCode = async (doc) => {
+          if (!doc || doc.codeNumber) return doc;
+          if (!doc.parentCategory) {
+            doc.codeNumber = String(rootCounters[doc.type]++);
+            doc.displayOrder = doc.displayOrder || 0;
+            await doc.save();
+            return doc;
+          }
+          const parent = await Category.findById(doc.parentCategory);
+          if (parent && !parent.codeNumber) await ensureDocHasCode(parent);
+          doc.codeNumber = await nextChildCodeNumber(doc.parentCategory, parent?.codeNumber);
+          doc.displayOrder = doc.displayOrder || 0;
+          await doc.save();
+          return doc;
+        };
+
+        const nextChildFromCache = async (parentDoc) => {
+          const parentId = String(parentDoc?._id || '').trim();
+          const prefix = String(parentDoc?.codeNumber || '').trim();
+          if (!parentId || !prefix) return null;
+
+          const existing = childCounters.get(parentId);
+          if (existing && existing.prefix === prefix) {
+            const code = `${prefix}-${existing.nextSuffix}`;
+            existing.nextSuffix += 1;
+            return code;
+          }
+
+          const children = await Category.find(
+            { parentCategory: parentDoc._id, codeNumber: { $regex: new RegExp(`^${escapeRegExp(prefix)}-`) } },
+            { codeNumber: 1 }
+          );
+          let maxSuffix = 0;
+          children.forEach(c => {
+            const parts = parseCodeParts(c.codeNumber);
+            const childPrefix = parts.slice(0, -1).join('-');
+            if (childPrefix !== prefix) return;
+            const last = parts[parts.length - 1];
+            const n = parseInt(last, 10);
+            if (Number.isFinite(n) && n > maxSuffix) maxSuffix = n;
+          });
+          const entry = { prefix, nextSuffix: maxSuffix + 1 };
+          childCounters.set(parentId, entry);
+          const code = `${prefix}-${entry.nextSuffix}`;
+          entry.nextSuffix += 1;
+          return code;
         };
         const rowsSorted = results
           .map((r, idx) => ({ r, idx }))
@@ -243,40 +367,44 @@ exports.bulkUploadCategories = async (req, res) => {
           const name = String(row.name || '').trim();
           if (!name) continue;
 
-          let codeNumber = normalizeCode(row.codenumber ?? row.code ?? canon.codenumber ?? canon.code);
-          if (!codeNumber) {
-            const candidate = nextCodes[type];
-            nextCodes[type] = candidate + 1;
-            codeNumber = String(candidate);
-          }
-          const displayOrder = toInt(row.displayorder ?? row.display_order ?? canon.displayorder) ?? parseInt(codeNumber, 10) ?? (idx + 1);
           const description = row.description || '';
           const level = normalizeLevel(canon.level) || 'root';
+          const isActive = normalizeIsActive(canon.isactive ?? row.isactive ?? row.active);
 
           const parentDirect = String(row.parent || canon.parent || '').trim();
           const rootRef = String(canon.rootcategory || '').trim();
           const subRef = String(canon.subcategory || '').trim();
 
           let parentId = null;
+          let parentDoc = null;
 
           if (parentDirect) {
             const parent = await findByNameOrCode({ type, value: parentDirect });
-            if (parent) parentId = parent._id;
+            if (parent) {
+              parentId = parent._id;
+              parentDoc = parent;
+            }
           } else if (level === 'sub') {
             const rootName = rootRef;
             if (rootName) {
               const root = await findByNameOrCode({ type, value: rootName, parentId: null });
-              if (root) parentId = root._id;
+              if (root) {
+                parentId = root._id;
+                parentDoc = root;
+              }
               if (!root) {
+                const rootCode = String(rootCounters[type]++);
                 const createdRoot = await upsertCategory({
                   type,
                   name: rootName,
-                  codeNumber: undefined,
+                  codeNumber: rootCode,
                   parentId: null,
+                  isActive: true,
                   description: '',
                   displayOrder: 0
                 });
                 parentId = createdRoot._id;
+                parentDoc = createdRoot;
               }
             }
           } else if (level === 'nested') {
@@ -287,11 +415,13 @@ exports.bulkUploadCategories = async (req, res) => {
                 const root = await findByNameOrCode({ type, value: rootRef, parentId: null });
                 if (root) rootId = root._id;
                 if (!root) {
+                  const rootCode = String(rootCounters[type]++);
                   const createdRoot = await upsertCategory({
                     type,
                     name: rootRef,
-                    codeNumber: undefined,
+                    codeNumber: rootCode,
                     parentId: null,
+                    isActive: true,
                     description: '',
                     displayOrder: 0
                   });
@@ -299,11 +429,26 @@ exports.bulkUploadCategories = async (req, res) => {
                 }
               }
               const sub = await findByNameOrCode({ type, value: subName, parentId: rootId ?? undefined });
-              if (sub) parentId = sub._id;
+              if (sub) {
+                parentId = sub._id;
+                parentDoc = sub;
+              }
             }
           }
 
-          await upsertCategory({ type, name, codeNumber, parentId, description, displayOrder });
+          let codeNumber = normalizeCode(row.codenumber ?? row.code ?? canon.codenumber ?? canon.code);
+          if (!codeNumber) {
+            if (!parentId || level === 'root') {
+              codeNumber = String(rootCounters[type]++);
+            } else {
+              if (!parentDoc) parentDoc = await Category.findById(parentId);
+              await ensureDocHasCode(parentDoc);
+              codeNumber = await nextChildFromCache(parentDoc);
+            }
+          }
+
+          const displayOrder = toInt(row.displayorder ?? row.display_order ?? canon.displayorder) ?? 0;
+          await upsertCategory({ type, name, codeNumber, parentId, isActive, description, displayOrder });
         }
 
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
@@ -325,6 +470,7 @@ exports.getTemplate = async (req, res) => {
     const type = (req.query.type === 'blog') ? 'blog' : 'product';
     const headers = [
       'CodeNumber',
+      'IsActive',
       'Name',
       'Description',
       'Type',
@@ -336,7 +482,8 @@ exports.getTemplate = async (req, res) => {
 
     const exampleRows = [
       {
-        CodeNumber: '1001',
+        CodeNumber: '1',
+        IsActive: 'true',
         Name: 'Art Prints',
         Description: 'All art prints',
         Type: type,
@@ -346,7 +493,8 @@ exports.getTemplate = async (req, res) => {
         Parent: ''
       },
       {
-        CodeNumber: '1101',
+        CodeNumber: '1-1',
+        IsActive: 'true',
         Name: 'Vintage Photograph',
         Description: 'Photography based prints',
         Type: type,
@@ -356,7 +504,8 @@ exports.getTemplate = async (req, res) => {
         Parent: ''
       },
       {
-        CodeNumber: '1111',
+        CodeNumber: '1-1-1',
+        IsActive: 'true',
         Name: 'Bombay',
         Description: 'Bombay collection',
         Type: type,

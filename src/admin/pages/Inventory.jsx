@@ -59,6 +59,7 @@ const Inventory = () => {
     sku: '',
     inventory: 0,
     displayOrder: 0,
+    isActive: true,
     isCustomizationAvailable: true,
     images: [],
     attributes: []
@@ -66,7 +67,7 @@ const Inventory = () => {
 
   const fetchProducts = async () => {
     try {
-      const data = await apiFetch('/products');
+      const data = await apiFetch('/products?includeInactive=true');
       setProducts(data);
       setLoading(false);
     } catch (err) {
@@ -77,7 +78,7 @@ const Inventory = () => {
 
   const fetchCategories = async () => {
     try {
-      const data = await apiFetch('/categories?type=product');
+      const data = await apiFetch('/categories?type=product&includeInactive=true');
       setCategories(data);
     } catch (err) {
       console.error("Error fetching categories:", err);
@@ -185,6 +186,18 @@ const Inventory = () => {
     }
   };
 
+  const toggleActive = async (productId, nextActive) => {
+    try {
+      const fd = new FormData();
+      fd.append('isActive', nextActive ? 'true' : 'false');
+      const updated = await apiFetch(`/products/${productId}`, { method: 'PUT', body: fd });
+      setProducts(prev => prev.map(p => (p._id === productId ? updated : p)));
+    } catch (err) {
+      alert("Error updating status: " + err.message);
+      fetchProducts();
+    }
+  };
+
   const selectedCount = Object.keys(selectedIds).filter(id => selectedIds[id]).length;
   const toggleSelectOne = (id) => setSelectedIds(prev => ({ ...prev, [id]: !prev[id] }));
   const toggleSelectAllVisible = (visible) => {
@@ -275,6 +288,7 @@ const Inventory = () => {
       sku: p.sku || '',
       inventory: p.inventory || 0,
       displayOrder: p.displayOrder || 0,
+      isActive: p.isActive !== false,
       isCustomizationAvailable: p.isCustomizationAvailable !== false,
       isExclusive: p.isExclusive || false,
       images: [],
@@ -322,6 +336,7 @@ const Inventory = () => {
       sku: '',
       inventory: 0,
       displayOrder: products.length > 0 ? Math.max(...products.map(p => p.displayOrder || 0)) + 1 : 1,
+      isActive: true,
       isCustomizationAvailable: true,
       isExclusive: false,
       images: [],
@@ -571,6 +586,7 @@ const Inventory = () => {
                 <th>Stock</th>
                 {showVolumetricWeight && <th>Vol. Weight (kg)</th>}
                 <th>Collection</th>
+                <th>Active</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -615,6 +631,13 @@ const Inventory = () => {
                     {p.isExclusive && <span className="status-pill cancelled" style={{ marginLeft: '5px' }}>Exclusive</span>}
                   </td>
                   <td>
+                    <input
+                      type="checkbox"
+                      checked={p.isActive !== false}
+                      onChange={e => toggleActive(p._id, e.target.checked)}
+                    />
+                  </td>
+                  <td>
                     <button className="btn-icon" onClick={() => openEdit(p)}>✏️</button>
                     <button className="btn-icon delete" onClick={() => handleDelete(p._id)}>🗑️</button>
                   </td>
@@ -622,7 +645,7 @@ const Inventory = () => {
               ))}
               {visibleProducts.length === 0 && (
                 <tr>
-                  <td colSpan={showVolumetricWeight ? 8 : 7} style={{ textAlign: 'center', padding: '30px', color: '#999' }}>
+                  <td colSpan={showVolumetricWeight ? 9 : 8} style={{ textAlign: 'center', padding: '30px', color: '#999' }}>
                     No products found.
                   </td>
                 </tr>
@@ -941,6 +964,10 @@ const Inventory = () => {
                   <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                     <input type="checkbox" checked={formData.isCustomizationAvailable} onChange={e => setFormData({ ...formData, isCustomizationAvailable: e.target.checked })} />
                     Allow Customization
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginTop: '15px' }}>
+                    <input type="checkbox" checked={formData.isActive} onChange={e => setFormData({ ...formData, isActive: e.target.checked })} />
+                    Active
                   </label>
                 </div>
 
