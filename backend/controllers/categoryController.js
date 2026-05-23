@@ -151,6 +151,12 @@ exports.bulkUploadCategories = async (req, res) => {
           return 'product';
         };
 
+        const normalizeLevel = (value) => {
+          const raw = String(value || '').toLowerCase().trim();
+          if (raw === 'nested' || raw === 'sub' || raw === 'root') return raw;
+          return '';
+        };
+
         const toInt = (value) => {
           if (value === undefined || value === null) return undefined;
           const raw = String(value).trim();
@@ -158,8 +164,6 @@ exports.bulkUploadCategories = async (req, res) => {
           const num = parseInt(raw, 10);
           return Number.isFinite(num) ? num : undefined;
         };
-
-        const categoryTypeFilter = { $or: [{ type: 'product' }, { type: { $exists: false } }] };
 
         const resolveType = (row) => {
           if (typeFromQuery) return normalizeType(typeFromQuery);
@@ -172,68 +176,108 @@ exports.bulkUploadCategories = async (req, res) => {
           return raw ? raw : undefined;
         };
 
-        const findByNameOrCode = async ({ type, value }) => {
+        const findByNameOrCode = async ({ type, value, parentId }) => {
           const v = String(value || '').trim();
           if (!v) return null;
-          const filterType = type === 'product' ? categoryTypeFilter : { type: 'blog' };
-          const byCode = await Category.findOne({ ...filterType, type, codeNumber: v });
+          const byCode = await Category.findOne({ type, codeNumber: v });
           if (byCode) return byCode;
-          return Category.findOne({ ...filterType, type, name: { $regex: new RegExp(`^${v}$`, 'i') } });
+          if (parentId !== undefined) {
+            const byNameAndParent = await Category.findOne({
+              type,
+              name: { $regex: new RegExp(`^${v}$`, 'i') },
+              parentCategory: parentId
+            });
+            if (byNameAndParent) return byNameAndParent;
+          }
+          return Category.findOne({ type, name: { $regex: new RegExp(`^${v}$`, 'i') } });
         };
 
-        // Pass 1: Upsert categories by (codeNumber + type) if code provided, else (name + type)
-        for (let i = 0; i < results.length; i++) {
-          const row = results[i];
+        const upsertCategory = async ({ type, name, codeNumber, parentId, description, displayOrder }) => {
+          const filter = codeNumber
+            ? { type, codeNumber }
+            : { type, name, parentCategory: parentId ?? null };
+          const update = {
+            name,
+            type,
+            parentCategory: parentId ?? null,
+            description: description || '',
+            displayOrder: displayOrder ?? 0
+          };
+          if (codeNumber) update.codeNumber = codeNumber;
+          return Category.findOneAndUpdate(filter, update, { upsert: true, new: true, setDefaultsOnInsert: true });
+        };
+
+        const levelOrder = { root: 0, sub: 1, nested: 2 };
+        const rowsSorted = results
+          .map((r, idx) => ({ r, idx }))
+          .sort((a, b) => {
+            const la = normalizeLevel(a.r._canon?.level) || 'root';
+            const lb = normalizeLevel(b.r._canon?.level) || 'root';
+            return (levelOrder[la] ?? 0) - (levelOrder[lb] ?? 0);
+          });
+
+        for (const { r: row, idx } of rowsSorted) {
           const canon = row._canon || {};
+          const type = resolveType(row);
           const name = String(row.name || '').trim();
           if (!name) continue;
-          const type = resolveType(row);
+
           const codeNumber = normalizeCode(row.codenumber ?? row.code ?? canon.codenumber ?? canon.code);
-          const displayOrder = toInt(row.displayorder ?? row.display_order ?? canon.displayorder) ?? (i + 1);
-          await Category.findOneAndUpdate(
-            codeNumber ? { codeNumber, type } : { name, type },
-            {
-              name,
-              type,
-              codeNumber,
-              description: row.description || '',
-              displayOrder
-            },
-            { upsert: true, new: true }
-          );
-        }
+          const displayOrder = toInt(row.displayorder ?? row.display_order ?? canon.displayorder) ?? (idx + 1);
+          const description = row.description || '';
+          const level = normalizeLevel(canon.level) || 'root';
 
-        // Pass 2: Resolve parent relationships (supports 3-level via Level/RootCategory/SubCategory or Parent)
-        for (const row of results) {
-          const canon = row._canon || {};
-          const name = String(row.name || '').trim();
-          if (!name) continue;
-          const type = resolveType(row);
-
-          const level = String(canon.level || '').toLowerCase().trim();
           const parentDirect = String(row.parent || canon.parent || '').trim();
-          const rootName = String(canon.rootcategory || '').trim();
-          const subName = String(canon.subcategory || '').trim();
-
-          let parentName = parentDirect;
-          if (!parentName) {
-            if (level === 'sub') parentName = rootName;
-            if (level === 'nested') parentName = subName;
-          }
+          const rootRef = String(canon.rootcategory || '').trim();
+          const subRef = String(canon.subcategory || '').trim();
 
           let parentId = null;
-          if (parentName) {
-            const parent = await findByNameOrCode({ type, value: parentName });
+
+          if (parentDirect) {
+            const parent = await findByNameOrCode({ type, value: parentDirect });
             if (parent) parentId = parent._id;
+          } else if (level === 'sub') {
+            const rootName = rootRef;
+            if (rootName) {
+              const root = await findByNameOrCode({ type, value: rootName, parentId: null });
+              if (root) parentId = root._id;
+              if (!root) {
+                const createdRoot = await upsertCategory({
+                  type,
+                  name: rootName,
+                  codeNumber: undefined,
+                  parentId: null,
+                  description: '',
+                  displayOrder: 0
+                });
+                parentId = createdRoot._id;
+              }
+            }
+          } else if (level === 'nested') {
+            const subName = subRef;
+            if (subName) {
+              let rootId = null;
+              if (rootRef) {
+                const root = await findByNameOrCode({ type, value: rootRef, parentId: null });
+                if (root) rootId = root._id;
+                if (!root) {
+                  const createdRoot = await upsertCategory({
+                    type,
+                    name: rootRef,
+                    codeNumber: undefined,
+                    parentId: null,
+                    description: '',
+                    displayOrder: 0
+                  });
+                  rootId = createdRoot._id;
+                }
+              }
+              const sub = await findByNameOrCode({ type, value: subName, parentId: rootId ?? undefined });
+              if (sub) parentId = sub._id;
+            }
           }
 
-          await Category.findOneAndUpdate(
-            (() => {
-              const codeNumber = normalizeCode(row.codenumber ?? row.code ?? canon.codenumber ?? canon.code);
-              return codeNumber ? { codeNumber, type } : { name, type };
-            })(),
-            { parentCategory: parentId }
-          );
+          await upsertCategory({ type, name, codeNumber, parentId, description, displayOrder });
         }
 
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);

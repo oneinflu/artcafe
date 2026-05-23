@@ -11,7 +11,7 @@ const CategorySchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-CategorySchema.index({ name: 1, type: 1 }, { unique: true });
+CategorySchema.index({ name: 1, type: 1, parentCategory: 1 }, { unique: true });
 CategorySchema.index({ codeNumber: 1, type: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Category', CategorySchema);

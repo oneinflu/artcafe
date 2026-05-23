@@ -1,7 +1,7 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { apiFetch } from '../../api';
 
-const BulkUpload = ({ endpoint, onComplete, label = "Bulk Upload" }) => {
+const BulkUpload = ({ endpoint, onComplete, onResult, label = "Bulk Upload" }) => {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
@@ -26,6 +26,7 @@ const BulkUpload = ({ endpoint, onComplete, label = "Bulk Upload" }) => {
       });
       console.log("Frontend: Upload Response", res);
       alert(res.msg || "Upload successful!");
+      if (onResult) onResult(res);
       if (onComplete) onComplete();
     } catch (err) {
       alert("Upload failed: " + err.message);

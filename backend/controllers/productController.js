@@ -214,240 +214,229 @@ exports.bulkUploadProducts = async (req, res) => {
     .on('end', async () => {
       try {
         let successCount = 0;
+        const failures = [];
         for (const row of results) {
-          const canon = row._canon || {};
-          const name = row.name || row.title || row.product;
+          try {
+            const canon = row._canon || {};
+            const name = String(row.name || row.title || row.product || '').trim();
 
-          const toNumber = (value) => {
-            if (value === undefined || value === null) return undefined;
-            const raw = String(value).trim();
-            if (!raw) return undefined;
-            const cleaned = raw.replace(/[^0-9.]/g, '');
-            const num = parseFloat(cleaned);
-            return Number.isFinite(num) ? num : undefined;
-          };
+            const toNumber = (value) => {
+              if (value === undefined || value === null) return undefined;
+              const raw = String(value).trim();
+              if (!raw) return undefined;
+              const cleaned = raw.replace(/[^0-9.]/g, '');
+              const num = parseFloat(cleaned);
+              return Number.isFinite(num) ? num : undefined;
+            };
 
-          const basePriceCandidates = [
-            row.baseprice,
-            row.price,
-            canon.mrpprice,
-            row.mrp,
-            canon.price2
-          ];
+            const basePriceCandidates = [
+              row.baseprice,
+              row.price,
+              canon.mrpprice,
+              row.mrp,
+              canon.price2
+            ];
+            const basePriceValue = basePriceCandidates.map(toNumber).find(v => v !== undefined);
 
-          const basePriceValue = basePriceCandidates.map(toNumber).find(v => v !== undefined);
+            if (!name) throw new Error('Missing Name');
+            if (basePriceValue === undefined) throw new Error('Missing MRP Price / Price');
 
-          if (!name || basePriceValue === undefined) continue;
+            const categoryTypeFilter = { $or: [{ type: 'product' }, { type: { $exists: false } }] };
 
-          const categoryTypeFilter = { $or: [{ type: 'product' }, { type: { $exists: false } }] };
+            const subCatName = String(row.subcategory || row.sub_category || '').trim();
+            const nestedCatName = String(row.nestedcategory || row.nested_category || '').trim();
+            const catName = String(row.category || '').trim();
 
-          // Find or Create Category, SubCategory, NestedCategory
-          const subCatName = row.subcategory || row.sub_category;
-          const nestedCatName = row.nestedcategory || row.nested_category;
-          const catName = row.category;
+            let catDoc = null;
+            let subCatDoc = null;
+            let nestedCatDoc = null;
 
-          let catDoc = null;
-          let subCatDoc = null;
-          let nestedCatDoc = null;
-
-          if (catName?.trim()) {
-            catDoc = await Category.findOne({ ...categoryTypeFilter, name: { $regex: new RegExp(`^${catName.trim()}$`, 'i') }, parentCategory: null });
-            if (!catDoc) {
-              catDoc = new Category({ name: catName.trim(), parentCategory: null, type: 'product' });
-              await catDoc.save();
-              console.log(`Bulk Upload: Created new Parent Category "${catName.trim()}"`);
+            if (catName) {
+              catDoc = await Category.findOne({ ...categoryTypeFilter, name: { $regex: new RegExp(`^${catName}$`, 'i') }, parentCategory: null });
+              if (!catDoc) {
+                catDoc = new Category({ name: catName, parentCategory: null, type: 'product' });
+                await catDoc.save();
+              }
             }
-          }
 
-          if (subCatName?.trim()) {
-            subCatDoc = await Category.findOne({ 
-              ...categoryTypeFilter,
-              name: { $regex: new RegExp(`^${subCatName.trim()}$`, 'i') },
-              parentCategory: catDoc ? catDoc._id : { $ne: null }
-            });
-            if (!subCatDoc) {
-              subCatDoc = new Category({ 
-                name: subCatName.trim(), 
-                parentCategory: catDoc ? catDoc._id : null,
-                type: 'product'
+            if (subCatName) {
+              subCatDoc = await Category.findOne({
+                ...categoryTypeFilter,
+                name: { $regex: new RegExp(`^${subCatName}$`, 'i') },
+                parentCategory: catDoc ? catDoc._id : { $ne: null }
               });
-              await subCatDoc.save();
-              console.log(`Bulk Upload: Created new Sub Category "${subCatName.trim()}" under Parent "${catDoc ? catDoc.name : 'None'}"`);
+              if (!subCatDoc) {
+                subCatDoc = new Category({
+                  name: subCatName,
+                  parentCategory: catDoc ? catDoc._id : null,
+                  type: 'product'
+                });
+                await subCatDoc.save();
+              }
             }
-          }
 
-          if (nestedCatName?.trim()) {
-            nestedCatDoc = await Category.findOne({
-              ...categoryTypeFilter,
-              name: { $regex: new RegExp(`^${nestedCatName.trim()}$`, 'i') },
-              parentCategory: subCatDoc ? subCatDoc._id : { $ne: null }
-            });
-            if (!nestedCatDoc) {
-              nestedCatDoc = new Category({
-                name: nestedCatName.trim(),
-                parentCategory: subCatDoc ? subCatDoc._id : null,
-                type: 'product'
+            if (nestedCatName) {
+              nestedCatDoc = await Category.findOne({
+                ...categoryTypeFilter,
+                name: { $regex: new RegExp(`^${nestedCatName}$`, 'i') },
+                parentCategory: subCatDoc ? subCatDoc._id : { $ne: null }
               });
-              await nestedCatDoc.save();
-              console.log(`Bulk Upload: Created new Nested Category "${nestedCatName.trim()}" under Parent "${subCatDoc ? subCatDoc.name : 'None'}"`);
+              if (!nestedCatDoc) {
+                nestedCatDoc = new Category({
+                  name: nestedCatName,
+                  parentCategory: subCatDoc ? subCatDoc._id : null,
+                  type: 'product'
+                });
+                await nestedCatDoc.save();
+              }
             }
-          }
 
-          if (!catDoc && subCatDoc) {
-            if (subCatDoc.parentCategory) {
-              catDoc = await Category.findById(subCatDoc.parentCategory);
-            } else {
-              catDoc = subCatDoc;
-              subCatDoc = null;
+            if (!catDoc && subCatDoc) {
+              if (subCatDoc.parentCategory) {
+                catDoc = await Category.findById(subCatDoc.parentCategory);
+              } else {
+                catDoc = subCatDoc;
+                subCatDoc = null;
+              }
             }
-          }
-
-          if (!subCatDoc && nestedCatDoc) {
-            if (nestedCatDoc.parentCategory) {
+            if (!subCatDoc && nestedCatDoc?.parentCategory) {
               subCatDoc = await Category.findById(nestedCatDoc.parentCategory);
             }
-          }
-          if (!catDoc && subCatDoc?.parentCategory) {
-            catDoc = await Category.findById(subCatDoc.parentCategory);
-          }
-          
-          if (!catDoc) {
-            console.error(`[Bulk Upload Error] Product: "${name}" - No Category or SubCategory specified.`);
-            continue;
-          }
-
-          // Find or Create Space
-          const spaceName = row.space || row.room;
-          let spaceDoc = null;
-          if (spaceName?.trim()) {
-            spaceDoc = await Space.findOne({ name: { $regex: new RegExp(`^${spaceName.trim()}$`, 'i') } });
-            if (!spaceDoc) {
-              spaceDoc = new Space({ name: spaceName.trim() });
-              await spaceDoc.save();
-              console.log(`Bulk Upload: Created new Space "${spaceName.trim()}"`);
+            if (!catDoc && subCatDoc?.parentCategory) {
+              catDoc = await Category.findById(subCatDoc.parentCategory);
             }
-          }
 
-          // Find or Create Style
-          const styleName = row.style;
-          let styleDoc = null;
-          if (styleName?.trim()) {
-            styleDoc = await Style.findOne({ name: { $regex: new RegExp(`^${styleName.trim()}$`, 'i') } });
-            if (!styleDoc) {
-              styleDoc = new Style({ name: styleName.trim() });
-              await styleDoc.save();
-              console.log(`Bulk Upload: Created new Style "${styleName.trim()}"`);
+            if (!catDoc) throw new Error('Missing Category / SubCategory');
+
+            const spaceName = String(row.space || row.room || '').trim();
+            let spaceDoc = null;
+            if (spaceName) {
+              spaceDoc = await Space.findOne({ name: { $regex: new RegExp(`^${spaceName}$`, 'i') } });
+              if (!spaceDoc) {
+                spaceDoc = new Space({ name: spaceName });
+                await spaceDoc.save();
+              }
             }
-          }
 
-          // Find or Create Collection
-          const collectionName = row.collection || row.discover_art || row.discover_collection;
-          let collectionDoc = null;
-          if (collectionName?.trim()) {
-            collectionDoc = await Collection.findOne({ name: { $regex: new RegExp(`^${collectionName.trim()}$`, 'i') } });
-            if (!collectionDoc) {
-              collectionDoc = new Collection({ name: collectionName.trim() });
-              await collectionDoc.save();
-              console.log(`Bulk Upload: Created new Collection "${collectionName.trim()}"`);
+            const styleName = String(row.style || '').trim();
+            let styleDoc = null;
+            if (styleName) {
+              styleDoc = await Style.findOne({ name: { $regex: new RegExp(`^${styleName}$`, 'i') } });
+              if (!styleDoc) {
+                styleDoc = new Style({ name: styleName });
+                await styleDoc.save();
+              }
             }
-          }
 
-          // Find Artist
-          const artistName = row.artist || row.creator;
-          const artistDoc = artistName?.trim() 
-            ? await Artist.findOne({ name: { $regex: new RegExp(`^${artistName.trim()}$`, 'i') } })
-            : null;
+            const collectionName = String(row.collection || row.discover_art || row.discover_collection || '').trim();
+            let collectionDoc = null;
+            if (collectionName) {
+              collectionDoc = await Collection.findOne({ name: { $regex: new RegExp(`^${collectionName}$`, 'i') } });
+              if (!collectionDoc) {
+                collectionDoc = new Collection({ name: collectionName });
+                await collectionDoc.save();
+              }
+            }
 
-          const images = row.images ? row.images.split('|').map(u => u.trim()).filter(Boolean) : [];
-          
-          // Handle Attributes using original keys
-          let attributes = [];
-          console.log(`Processing product: ${name}`);
-          console.log(`  All headers found: ${Object.keys(row._original).join(', ')}`);
-          for (const key of Object.keys(row._original)) {
-            const cleanKey = key.trim();
-            if (/^\[attr\]/i.test(cleanKey)) {
-              const groupName = cleanKey.replace(/^\[attr\]/i, '').trim();
-              const varsStr = row._original[key];
-              
-              if (varsStr?.trim()) {
-                console.log(`  Checking Attribute Group: "${groupName}"`);
-                const attrGroup = await AttributeGroup.findOne({ 
-                  name: { $regex: new RegExp(`^${groupName}$`, 'i') } 
-                });
-                if (attrGroup) {
-                  const vars = varsStr.split('|').map(v => v.trim()).filter(Boolean);
-                  console.log(`    Found Group! Adding ${vars.length} variations: ${vars.join(', ')}`);
-                  attributes.push({
-                    group: attrGroup._id,
-                    variations: vars
+            const artistName = String(row.artist || row.creator || '').trim();
+            const artistDoc = artistName
+              ? await Artist.findOne({ name: { $regex: new RegExp(`^${artistName}$`, 'i') } })
+              : null;
+
+            const images = row.images ? String(row.images).split('|').map(u => u.trim()).filter(Boolean) : [];
+
+            let attributes = [];
+            for (const key of Object.keys(row._original || {})) {
+              const cleanKey = key.trim();
+              if (/^\[attr\]/i.test(cleanKey)) {
+                const groupName = cleanKey.replace(/^\[attr\]/i, '').trim();
+                const varsStr = row._original[key];
+                if (varsStr?.trim()) {
+                  const attrGroup = await AttributeGroup.findOne({
+                    name: { $regex: new RegExp(`^${groupName}$`, 'i') }
                   });
-                } else {
-                  console.log(`    SKIPPED: Group "${groupName}" not found in DB.`);
+                  if (attrGroup) {
+                    const vars = String(varsStr).split('|').map(v => v.trim()).filter(Boolean);
+                    attributes.push({ group: attrGroup._id, variations: vars });
+                  }
                 }
               }
             }
+
+            const sku = String(row.sku || '').trim() || undefined;
+            const mrpPrice = toNumber(canon.mrpprice);
+
+            const productData = {
+              name,
+              description: row.description || '',
+              basePrice: basePriceValue,
+              compareAtPrice: (row.compareatprice || row.sale_price) ? toNumber(row.compareatprice || row.sale_price) : undefined,
+              sku,
+              inventory: parseInt(row.inventory || row.stock || 0),
+              category: catDoc._id,
+              subCategory: subCatDoc?._id || null,
+              nestedCategory: nestedCatDoc?._id || null,
+              space: spaceDoc?._id,
+              style: styleDoc?._id,
+              discoverCollection: collectionDoc?._id,
+              displayOrder: parseInt(row.displayorder || row.order || 0),
+              isExclusive: (() => {
+                const rawVal = row.isexclusive || row.is_exclusive || row.exclusive;
+                const val = String(rawVal || '').toLowerCase().trim();
+                return val === 'true' || val === '1' || val === 'y' || val === 'yes';
+              })(),
+              isCustomizationAvailable: (() => {
+                const val = String(row.iscustomizationavailable || row.is_customization || '').toLowerCase().trim();
+                if (val === '') return true;
+                return val !== 'false' && val !== '0' && val !== 'n' && val !== 'no';
+              })(),
+              images,
+              attributes,
+              artist: artistDoc?._id,
+
+              hsnCode: String(canon.hsncode || '').trim() || undefined,
+              gst: String(canon.gst || '').trim() || undefined,
+              specifications: row.specifications || undefined,
+              width: row.width || undefined,
+              height: row.height || undefined,
+              depth: row.depth || undefined,
+              framing: row.framing || undefined,
+              year: row.year || undefined,
+              edition: row.edition || undefined,
+              provenance: row.provenance || undefined,
+              medium: row.medium || undefined,
+              blogId: String(canon.blogid || '').trim() || undefined,
+              dispatchWithin: String(canon.dispatchwithin || '').trim() || undefined,
+              mrpPrice,
+              mrpDiscount: String(canon.mrpdiscount || '').trim() || undefined,
+              corporateDiscount: String(canon.corporatediscount || '').trim() || undefined,
+              architectDiscount: String(canon.architectdiscount || '').trim() || undefined
+            };
+
+            const created = await new Product(productData).save();
+            successCount++;
+          } catch (err) {
+            const name = String(row.name || row.title || row.product || '').trim();
+            const sku = String(row.sku || '').trim();
+            let msg = err?.message || 'Unknown error';
+            if (err?.code === 11000) {
+              msg = `Duplicate key: ${Object.keys(err.keyValue || {}).map(k => `${k}=${err.keyValue[k]}`).join(', ') || 'duplicate'}`;
+            }
+            failures.push({
+              name: name || undefined,
+              sku: sku || undefined,
+              error: msg
+            });
           }
-          console.log(`Final attributes for ${name}:`, JSON.stringify(attributes));
-
-          const sku = row.sku?.trim();
-          const filter = sku ? { sku } : { name: name.trim() };
-
-          const artworkPrice = toNumber(canon.artworkprice ?? canon.price2);
-          const mrpPrice = toNumber(canon.mrpprice);
-          
-          await Product.findOneAndUpdate(filter, {
-            name: name.trim(),
-            description: row.description || '',
-            basePrice: basePriceValue,
-            compareAtPrice: (row.compareatprice || row.sale_price) ? toNumber(row.compareatprice || row.sale_price) : undefined,
-            sku: sku || undefined,
-            inventory: parseInt(row.inventory || row.stock || 0),
-            category: catDoc._id,
-            subCategory: subCatDoc?._id || null,
-            nestedCategory: nestedCatDoc?._id || null,
-            space: spaceDoc?._id,
-            style: styleDoc?._id,
-            discoverCollection: collectionDoc?._id,
-            displayOrder: parseInt(row.displayorder || row.order || 0),
-            isExclusive: (() => {
-              const rawVal = row.isexclusive || row.is_exclusive || row.exclusive;
-              const val = String(rawVal || '').toLowerCase().trim();
-              console.log(`[DEBUG] Product "${name}" raw isExclusive: "${rawVal}", parsed: ${val === 'true' || val === '1' || val === 'y' || val === 'yes'}`);
-              return val === 'true' || val === '1' || val === 'y' || val === 'yes';
-            })(),
-            isCustomizationAvailable: (() => {
-              const val = String(row.iscustomizationavailable || row.is_customization || '').toLowerCase().trim();
-              if (val === '') return true; // Default
-              return val !== 'false' && val !== '0' && val !== 'n' && val !== 'no';
-            })(),
-            images,
-            attributes,
-            artist: artistDoc?._id,
-
-            hsnCode: String(canon.hsncode || '').trim() || undefined,
-            gst: String(canon.gst || '').trim() || undefined,
-            specifications: row.specifications || undefined,
-            width: row.width || undefined,
-            height: row.height || undefined,
-            depth: row.depth || undefined,
-            artworkPrice,
-            framing: row.framing || undefined,
-            year: row.year || undefined,
-            edition: row.edition || undefined,
-            provenance: row.provenance || undefined,
-            medium: row.medium || undefined,
-            blogId: String(canon.blogid || '').trim() || undefined,
-            dispatchWithin: String(canon.dispatchwithin || '').trim() || undefined,
-            mrpPrice,
-            mrpDiscount: String(canon.mrpdiscount || '').trim() || undefined,
-            corporateDiscount: String(canon.corporatediscount || '').trim() || undefined,
-            architectDiscount: String(canon.architectdiscount || '').trim() || undefined
-          }, { upsert: true, new: true, setDefaultsOnInsert: true });
-          successCount++;
         }
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        res.json({ msg: `${successCount} out of ${results.length} products processed successfully` });
+        res.json({
+          msg: `${successCount} out of ${results.length} products processed successfully`,
+          total: results.length,
+          successCount,
+          failureCount: failures.length,
+          failures
+        });
       } catch (err) {
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         res.status(500).json({ msg: 'Error: ' + err.message });

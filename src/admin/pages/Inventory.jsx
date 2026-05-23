@@ -12,6 +12,7 @@ const Inventory = () => {
   const [showVolumetricWeight, setShowVolumetricWeight] = useState(false);
   const [volumetricWeights, setVolumetricWeights] = useState({});
   const [loadingVolumetricWeights, setLoadingVolumetricWeights] = useState(false);
+  const [lastBulkUploadResult, setLastBulkUploadResult] = useState(null);
   const [categories, setCategories] = useState([]);
   const [spaces, setSpaces] = useState([]);
   const [styles, setStyles] = useState([]);
@@ -414,10 +415,46 @@ const Inventory = () => {
           <button className="btn-secondary" onClick={() => setShowVolumetricWeight(v => !v)}>
             ⚖️ {showVolumetricWeight ? 'Hide' : 'Show'} Vol. Weight
           </button>
-          <BulkUpload endpoint="/products/bulk" onComplete={fetchProducts} label="Bulk Upload" />
+          <BulkUpload
+            endpoint="/products/bulk"
+            onComplete={fetchProducts}
+            onResult={(res) => setLastBulkUploadResult(res)}
+            label="Bulk Upload"
+          />
           <button className="btn-primary" onClick={openAdd}>+ Add Product</button>
         </div>
       </div>
+
+      {lastBulkUploadResult?.failureCount > 0 && (
+        <div style={{ marginBottom: '20px', background: '#fff', border: '1px solid #eee', borderRadius: '15px', padding: '15px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div style={{ fontWeight: 800 }}>
+              Upload Errors: {lastBulkUploadResult.failureCount} / {lastBulkUploadResult.total || 0}
+            </div>
+            <button className="btn-secondary" onClick={() => setLastBulkUploadResult(null)}>Clear</button>
+          </div>
+          <div style={{ maxHeight: '260px', overflow: 'auto' }}>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>SKU</th>
+                  <th>Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(lastBulkUploadResult.failures || []).map((f, idx) => (
+                  <tr key={idx}>
+                    <td>{f.name || '—'}</td>
+                    <td>{f.sku || '—'}</td>
+                    <td style={{ color: '#d32f2f', fontWeight: 700 }}>{f.error || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {loading ? <p>Loading...</p> : (
         <div className="admin-table-wrapper">
