@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -34,6 +34,7 @@ import Artists from './admin/pages/Artists';
 import TradePartners from './admin/pages/TradePartners';
 import ExclusiveProducts from './admin/pages/ExclusiveProducts';
 import AdminLogin from './admin/pages/AdminLogin';
+import VolumetricWeights from './admin/pages/VolumetricWeights';
 
 import { apiFetch } from './api';
 import './App.css';
@@ -115,6 +116,18 @@ function App() {
     window.location.href = '/';
   };
 
+  const updateQty = (id, delta) => {
+    setCart(prev =>
+      prev
+        .map(item => (item.id === id ? { ...item, qty: Math.max(1, (item.qty || 1) + delta) } : item))
+        .filter(Boolean)
+    );
+  };
+
+  const removeItem = (id) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+  };
+
   return (
     <Router>
       <Routes>
@@ -141,11 +154,16 @@ function App() {
           <Route path="case-studies" element={<CaseStudies />} />
           <Route path="artists" element={<Artists />} />
           <Route path="trade-partners" element={<TradePartners />} />
+          <Route path="volumetric-weights" element={<VolumetricWeights />} />
         </Route>
 
         {/* Storefront Routes */}
         <Route path="*" element={
           <div className="app-wrapper">
+            {loading ? (
+              <div style={{ padding: '120px 0', textAlign: 'center' }}>Loading...</div>
+            ) : (
+              <>
             <Header 
               categories={categories} 
               spaces={spaces}
@@ -189,7 +207,9 @@ function App() {
             <CartSidebar 
               isOpen={isCartOpen} 
               onClose={() => setIsCartOpen(false)} 
-              cart={cart} 
+              cart={cart}
+              updateQty={updateQty}
+              removeItem={removeItem}
             />
             
             <AuthModal 
@@ -197,6 +217,8 @@ function App() {
               onClose={() => setIsAuthOpen(false)} 
               onLogin={(u) => { setUser(u); setIsAuthOpen(false); }}
             />
+              </>
+            )}
           </div>
         } />
       </Routes>

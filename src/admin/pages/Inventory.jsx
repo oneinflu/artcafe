@@ -10,6 +10,8 @@ const Inventory = () => {
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [showVolumetricWeight, setShowVolumetricWeight] = useState(false);
+  const [volumetricWeights, setVolumetricWeights] = useState({});
+  const [loadingVolumetricWeights, setLoadingVolumetricWeights] = useState(false);
   const [categories, setCategories] = useState([]);
   const [spaces, setSpaces] = useState([]);
   const [styles, setStyles] = useState([]);
@@ -324,6 +326,31 @@ const Inventory = () => {
     }
   };
 
+  useEffect(() => {
+    const load = async () => {
+      if (!showVolumetricWeight) return;
+      setLoadingVolumetricWeights(true);
+      try {
+        const items = await apiFetch('/volumetric-weights');
+        const next = {};
+        items.forEach(i => {
+          const subId = i.subCategory?._id || i.subCategory;
+          const size = String(i.size || '').trim();
+          const medium = String(i.medium || '').trim();
+          if (!subId || !size || !medium) return;
+          next[`${subId}|${size}|${medium}`] = i.weightKg;
+        });
+        setVolumetricWeights(next);
+      } catch (err) {
+        console.error(err);
+        setVolumetricWeights({});
+      } finally {
+        setLoadingVolumetricWeights(false);
+      }
+    };
+    load();
+  }, [showVolumetricWeight]);
+
   const parseDimensionToCm = (value) => {
     if (value === undefined || value === null) return null;
     const raw = String(value).trim();
@@ -347,6 +374,35 @@ const Inventory = () => {
     const kg = (l * h * d) / 5000;
     if (!Number.isFinite(kg) || kg <= 0) return null;
     return kg;
+  };
+
+  const normalizeMatrixMedium = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return 'Paper';
+    const lower = raw.toLowerCase();
+    if (lower.includes('canvas')) return 'Canvas';
+    if (lower.includes('paper')) return 'Paper';
+    return 'Paper';
+  };
+
+  const getMatrixSize = (product) => {
+    const sizeAttr = (product?.attributes || []).find(a => {
+      const name = String(a?.group?.name || '').toLowerCase();
+      return name.includes('size');
+    });
+    const first = sizeAttr?.variations?.[0];
+    if (!first) return null;
+    return String(first).trim();
+  };
+
+  const calcVolumetricWeightFromMatrixKg = (product) => {
+    const subId = product?.subCategory?._id || product?.subCategory;
+    const size = getMatrixSize(product);
+    const medium = normalizeMatrixMedium(product?.medium);
+    if (!subId || !size) return null;
+    const key = `${subId}|${size}|${medium}`;
+    const kg = volumetricWeights[key];
+    return Number.isFinite(kg) ? kg : null;
   };
 
   return (
@@ -404,7 +460,8 @@ const Inventory = () => {
                   {showVolumetricWeight && (
                     <td>
                       {(() => {
-                        const kg = calcVolumetricWeightKg(p);
+                        if (loadingVolumetricWeights) return 'Loading...';
+                        const kg = calcVolumetricWeightFromMatrixKg(p) ?? calcVolumetricWeightKg(p);
                         return kg ? `${kg.toFixed(2)} kg` : '—';
                       })()}
                     </td>

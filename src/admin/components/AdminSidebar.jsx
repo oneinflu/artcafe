@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 const AdminSidebar = () => {
@@ -11,6 +11,7 @@ const AdminSidebar = () => {
     { name: 'Inventory', path: '/admin/inventory', icon: '📦' },
     { name: 'Exclusive Pro', path: '/admin/exclusive', icon: '💎' },
     { name: 'Rental Products', path: '/admin/rentals', icon: '🔑' },
+    { name: 'Volumetric', path: '/admin/volumetric-weights', icon: '⚖️' },
     { name: 'Categories', path: '/admin/categories', icon: '📁' },
     { name: 'Spaces', path: '/admin/spaces', icon: '🛋️' },
     { name: 'Styles', path: '/admin/styles', icon: '✨' },

@@ -467,8 +467,6 @@ exports.getTemplate = async (req, res) => {
     let headers = [
       'Name',
       'Description',
-      'Price',
-      'CompareAtPrice',
       'Category',
       'SubCategory',
       'NestedCategory',
@@ -496,7 +494,6 @@ exports.getTemplate = async (req, res) => {
       'Width',
       'Height',
       'Depth',
-      'ArtworkPrice',
       'Framing',
       'Year',
       'Edition',
@@ -514,8 +511,6 @@ exports.getTemplate = async (req, res) => {
     const exampleData = {
       'Name': 'Premium Business Cards',
       'Description': 'High quality matte finish cards',
-      'Price': '499',
-      'CompareAtPrice': '599',
       'Category': 'Business Cards',
       'SubCategory': 'Premium Cards',
       'NestedCategory': 'Textured Cards',
@@ -535,7 +530,6 @@ exports.getTemplate = async (req, res) => {
       'Width': '300 mm - 11.81 inches',
       'Height': '450 mm - 17.72 inches',
       'Depth': '',
-      'ArtworkPrice': '5000',
       'Framing': 'With Framing',
       'Year': '1890 c.',
       'Edition': 'Edition Size 300',
