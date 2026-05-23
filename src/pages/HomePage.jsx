@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { resolveImageUrl, slugify } from '../utils/helpers';
 import BASE_URL, { apiFetch } from '../api';
@@ -25,7 +25,6 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
   }
   const latestProducts = newArrivals;
   
-  const bestSellersProducts = actualProducts.filter(p => p.isFeatured || p._id.startsWith('d')).slice(0, 4);
   const [activeSlide, setActiveSlide] = useState(0);
   const [selectedMood, setSelectedMood] = useState(null); // null = All Moods
   const [selectedCaseStudy, setSelectedCaseStudy] = useState(null);
@@ -188,6 +187,39 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
         { name: "Architectural Noir", count: "56 Pieces", img: "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&q=80&w=800" },
         { name: "Heritage Landscapes", count: "210 Pieces", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800" }
       ];
+
+  const fallbackRootCategoryImages = [
+    "https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1513519245088-0e12902e35ca?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800"
+  ];
+
+  const displayRootCategories = Array.isArray(categories)
+    ? categories
+        .filter(c => (c.type || 'product') === 'product')
+        .filter(c => !c.parentCategory)
+        .map((cat, i) => {
+          const catId = (cat._id || '').toString();
+          const catProducts = actualProducts.filter(p => {
+            const pCat = p.category?._id || p.category;
+            return pCat && pCat.toString() === catId;
+          });
+          const img = cat.image
+            ? resolveImageUrl(cat.image)
+            : catProducts[0]?.images?.[0]
+              ? resolveImageUrl(catProducts[0].images[0])
+              : fallbackRootCategoryImages[i % fallbackRootCategoryImages.length];
+          return {
+            _id: cat._id,
+            name: cat.name,
+            count: `${catProducts.length} Piece${catProducts.length === 1 ? '' : 's'}`,
+            img
+          };
+        })
+    : [];
 
   // Trade Form States
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
@@ -478,18 +510,15 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
             >
               <span className="mood-name">All Moods</span>
             </button>
-            {styles.map(style => {
-              const count = actualProducts.filter(p => p.style?._id === style._id).length;
-              return (
-                <button
-                  key={style._id}
-                  className={`mood-pill ${selectedMood?._id === style._id ? 'active' : ''}`}
-                  onClick={() => setSelectedMood(style)}
-                >
-                  <span className="mood-name">{style.name}</span>
-                </button>
-              );
-            })}
+            {styles.map(style => (
+              <button
+                key={style._id}
+                className={`mood-pill ${selectedMood?._id === style._id ? 'active' : ''}`}
+                onClick={() => setSelectedMood(style)}
+              >
+                <span className="mood-name">{style.name}</span>
+              </button>
+            ))}
           </div>
 
           {/* Product Results */}
@@ -955,8 +984,30 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
         </div>
       </section>
 
-
       {/* SECTION 10.5: Curated Collections */}
+      {displayRootCategories.length > 0 && (
+        <section className="curated-categories-section section">
+          <div className="container">
+            <div className="section-header-luxury centered">
+              <span className="subtitle gold">SHOP BY CATEGORY</span>
+              <h2 className="luxury-title-main">Root Categories</h2>
+            </div>
+            <div className="categories-grid-luxury">
+              {displayRootCategories.map((cat, i) => (
+                <Link key={cat._id || i} to={`/shop?category=${slugify(cat.name)}`} className="category-card-luxury" style={{ display: 'block', textDecoration: 'none' }}>
+                  <img src={cat.img} alt={cat.name} />
+                  <div className="cat-overlay">
+                    <h3>{cat.name}</h3>
+                    <span>{cat.count}</span>
+                    <button className="view-cat">EXPLORE CATEGORY</button>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="curated-categories-section section">
         <div className="container">
           <div className="section-header-luxury centered">
@@ -1555,4 +1606,3 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
 };
 
 export default HomePage;
-
