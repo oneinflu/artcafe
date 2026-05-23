@@ -28,6 +28,10 @@ exports.createCategory = async (req, res) => {
     if (req.file) {
       categoryData.image = req.file.path;
     }
+    if (categoryData.codeNumber !== undefined && categoryData.codeNumber !== null) {
+      const v = String(categoryData.codeNumber).trim();
+      categoryData.codeNumber = v ? v : undefined;
+    }
     if (!categoryData.parentCategory || categoryData.parentCategory === "" || categoryData.parentCategory === "null") {
       categoryData.parentCategory = null;
     }
@@ -45,6 +49,10 @@ exports.updateCategory = async (req, res) => {
     const updateData = { ...req.body };
     if (req.file) {
       updateData.image = req.file.path;
+    }
+    if (updateData.codeNumber !== undefined && updateData.codeNumber !== null) {
+      const v = String(updateData.codeNumber).trim();
+      updateData.codeNumber = v ? v : undefined;
     }
     
     // Robust check for empty parent category
@@ -70,12 +78,39 @@ exports.deleteCategory = async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
     if (!category) return res.status(404).json({ msg: 'Category not found' });
-    
-    await Category.findByIdAndDelete(req.params.id);
-    res.json({ msg: 'Category removed successfully' });
+    const idsToDelete = [category._id];
+    for (let i = 0; i < idsToDelete.length; i++) {
+      const children = await Category.find({ parentCategory: idsToDelete[i] }, { _id: 1 });
+      children.forEach(c => idsToDelete.push(c._id));
+    }
+    const result = await Category.deleteMany({ _id: { $in: idsToDelete } });
+    res.json({ msg: `Removed ${result.deletedCount} categories` });
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ msg: 'Server error during category deletion' });
+  }
+};
+
+exports.bulkDelete = async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+    const queue = ids.map(String).filter(Boolean);
+    const idsToDelete = [];
+    const seen = new Set();
+
+    while (queue.length) {
+      const id = queue.shift();
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      idsToDelete.push(id);
+      const children = await Category.find({ parentCategory: id }, { _id: 1 });
+      children.forEach(c => queue.push(String(c._id)));
+    }
+
+    const result = await Category.deleteMany({ _id: { $in: idsToDelete } });
+    res.json({ msg: `Removed ${result.deletedCount} categories` });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
   }
 };
 
@@ -132,19 +167,35 @@ exports.bulkUploadCategories = async (req, res) => {
           return normalizeType(canon.type);
         };
 
-        // Pass 1: Upsert categories by (name + type)
+        const normalizeCode = (value) => {
+          const raw = String(value || '').trim();
+          return raw ? raw : undefined;
+        };
+
+        const findByNameOrCode = async ({ type, value }) => {
+          const v = String(value || '').trim();
+          if (!v) return null;
+          const filterType = type === 'product' ? categoryTypeFilter : { type: 'blog' };
+          const byCode = await Category.findOne({ ...filterType, type, codeNumber: v });
+          if (byCode) return byCode;
+          return Category.findOne({ ...filterType, type, name: { $regex: new RegExp(`^${v}$`, 'i') } });
+        };
+
+        // Pass 1: Upsert categories by (codeNumber + type) if code provided, else (name + type)
         for (let i = 0; i < results.length; i++) {
           const row = results[i];
           const canon = row._canon || {};
           const name = String(row.name || '').trim();
           if (!name) continue;
           const type = resolveType(row);
+          const codeNumber = normalizeCode(row.codenumber ?? row.code ?? canon.codenumber ?? canon.code);
           const displayOrder = toInt(row.displayorder ?? row.display_order ?? canon.displayorder) ?? (i + 1);
           await Category.findOneAndUpdate(
-            { name, type },
+            codeNumber ? { codeNumber, type } : { name, type },
             {
               name,
               type,
+              codeNumber,
               description: row.description || '',
               displayOrder
             },
@@ -172,13 +223,15 @@ exports.bulkUploadCategories = async (req, res) => {
 
           let parentId = null;
           if (parentName) {
-            const parentTypeFilter = type === 'product' ? categoryTypeFilter : { type: 'blog' };
-            const parent = await Category.findOne({ ...parentTypeFilter, name: { $regex: new RegExp(`^${parentName}$`, 'i') } });
+            const parent = await findByNameOrCode({ type, value: parentName });
             if (parent) parentId = parent._id;
           }
 
           await Category.findOneAndUpdate(
-            { name, type },
+            (() => {
+              const codeNumber = normalizeCode(row.codenumber ?? row.code ?? canon.codenumber ?? canon.code);
+              return codeNumber ? { codeNumber, type } : { name, type };
+            })(),
             { parentCategory: parentId }
           );
         }
@@ -201,6 +254,7 @@ exports.getTemplate = async (req, res) => {
   try {
     const type = (req.query.type === 'blog') ? 'blog' : 'product';
     const headers = [
+      'CodeNumber',
       'Name',
       'Description',
       'DisplayOrder',
@@ -213,6 +267,7 @@ exports.getTemplate = async (req, res) => {
 
     const exampleRows = [
       {
+        CodeNumber: '1001',
         Name: 'Art Prints',
         Description: 'All art prints',
         DisplayOrder: '1',
@@ -223,6 +278,7 @@ exports.getTemplate = async (req, res) => {
         Parent: ''
       },
       {
+        CodeNumber: '1101',
         Name: 'Vintage Photograph',
         Description: 'Photography based prints',
         DisplayOrder: '2',
@@ -233,6 +289,7 @@ exports.getTemplate = async (req, res) => {
         Parent: ''
       },
       {
+        CodeNumber: '1111',
         Name: 'Bombay',
         Description: 'Bombay collection',
         DisplayOrder: '3',

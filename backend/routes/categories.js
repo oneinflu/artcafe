@@ -25,6 +25,8 @@ router.post('/', auth('admin'), cloudinaryUpload.single('image'), categoryContro
 // @route   POST api/categories/bulk
 router.post('/bulk', auth('admin'), upload.single('file'), categoryController.bulkUploadCategories);
 
+router.post('/bulk-delete', auth('admin'), categoryController.bulkDelete);
+
 // @route   PUT api/categories/:id
 // Use cloudinaryUpload.single('image') for updating a category with an image
 router.put('/:id', auth('admin'), cloudinaryUpload.single('image'), categoryController.updateCategory);

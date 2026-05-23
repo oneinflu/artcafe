@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const CategorySchema = new mongoose.Schema({
+  codeNumber: { type: String },
   name: { type: String, required: true },
   type: { type: String, enum: ['product', 'blog'], default: 'product' },
   description: { type: String },
@@ -11,5 +12,6 @@ const CategorySchema = new mongoose.Schema({
 });
 
 CategorySchema.index({ name: 1, type: 1 }, { unique: true });
+CategorySchema.index({ codeNumber: 1, type: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Category', CategorySchema);

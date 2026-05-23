@@ -15,10 +15,16 @@ const Categories = () => {
   const [showModal, setShowModal] = useState(false);
   const [editCategory, setEditCategory] = useState(null);
   const [imageFile, setImageFile] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [levelFilter, setLevelFilter] = useState('all'); // all | root | sub | nested
+  const [sortBy, setSortBy] = useState('code'); // code | name | displayOrder
+  const [sortDir, setSortDir] = useState('asc'); // asc | desc
+  const [selectedIds, setSelectedIds] = useState({});
   const [categoryLevel, setCategoryLevel] = useState('root'); // root | sub | nested
   const [rootParentId, setRootParentId] = useState('');
   const [subParentId, setSubParentId] = useState('');
   const [formData, setFormData] = useState({ 
+    codeNumber: '',
     name: '', 
     description: '', 
     parentCategory: '', 
@@ -66,6 +72,9 @@ const Categories = () => {
 
   useEffect(() => {
     setSelectedRootId('all');
+    setSearchTerm('');
+    setLevelFilter('all');
+    setSelectedIds({});
     fetchCategories();
   }, [activeTab]);
 
@@ -75,6 +84,7 @@ const Categories = () => {
     const method = editCategory ? 'PUT' : 'POST';
 
     const fd = new FormData();
+    fd.append('codeNumber', formData.codeNumber || '');
     fd.append('name', formData.name);
     fd.append('description', formData.description || '');
     fd.append('parentCategory', formData.parentCategory || '');
@@ -102,10 +112,33 @@ const Categories = () => {
     if (window.confirm("Are you sure? This will not delete items in this category, but they will become uncategorized.")) {
       try {
         await apiFetch(`/categories/${id}`, { method: 'DELETE' });
+        setSelectedIds(prev => {
+          if (!prev[id]) return prev;
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
         fetchCategories();
       } catch (err) {
         alert("Error deleting category: " + err.message);
       }
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Object.keys(selectedIds).filter(id => selectedIds[id]);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} selected categories? This will also delete nested children.`)) return;
+    try {
+      const res = await apiFetch('/categories/bulk-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids })
+      });
+      alert(res.msg || 'Deleted');
+      setSelectedIds({});
+      fetchCategories();
+    } catch (err) {
+      alert("Bulk delete failed: " + err.message);
     }
   };
 
@@ -131,6 +164,7 @@ const Categories = () => {
       }
     }
     setFormData({
+      codeNumber: c.codeNumber || '',
       name: c.name || '',
       description: c.description || '',
       parentCategory: c.parentCategory?._id || c.parentCategory || '',
@@ -148,6 +182,7 @@ const Categories = () => {
     setRootParentId('');
     setSubParentId('');
     setFormData({ 
+      codeNumber: '',
       name: '', 
       description: '', 
       parentCategory: '', 
@@ -161,6 +196,13 @@ const Categories = () => {
   const rootCategories = categories.filter(c => !c.parentCategory);
 
   const categoriesById = new Map(categories.map(c => [c._id, c]));
+  const getDepth = (category) => {
+    const parentId = category?.parentCategory?._id || category?.parentCategory;
+    if (!parentId) return 0;
+    const parent = categoriesById.get(parentId);
+    const parentParentId = parent?.parentCategory?._id || parent?.parentCategory;
+    return parentParentId ? 2 : 1;
+  };
   const getRootAncestorId = (category) => {
     let current = category;
     const seen = new Set();
@@ -173,10 +215,64 @@ const Categories = () => {
     return current?._id || category?._id;
   };
 
-  const filteredCategories = categories.filter(c => {
-    if (selectedRootId === 'all') return true;
-    return getRootAncestorId(c) === selectedRootId || c._id === selectedRootId;
-  });
+  const visibleCategories = categories
+    .filter(c => {
+      if (selectedRootId === 'all') return true;
+      return getRootAncestorId(c) === selectedRootId || c._id === selectedRootId;
+    })
+    .filter(c => {
+      const q = searchTerm.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        String(c.name || '').toLowerCase().includes(q) ||
+        String(c.codeNumber || '').toLowerCase().includes(q)
+      );
+    })
+    .filter(c => {
+      if (levelFilter === 'all') return true;
+      const depth = getDepth(c);
+      if (levelFilter === 'root') return depth === 0;
+      if (levelFilter === 'sub') return depth === 1;
+      if (levelFilter === 'nested') return depth === 2;
+      return true;
+    })
+    .sort((a, b) => {
+      const dir = sortDir === 'desc' ? -1 : 1;
+      if (sortBy === 'displayOrder') {
+        return dir * ((Number(a.displayOrder || 0)) - (Number(b.displayOrder || 0)));
+      }
+      if (sortBy === 'name') {
+        return dir * String(a.name || '').localeCompare(String(b.name || ''));
+      }
+      const aCode = String(a.codeNumber || '').trim();
+      const bCode = String(b.codeNumber || '').trim();
+      const aNum = parseInt(aCode, 10);
+      const bNum = parseInt(bCode, 10);
+      const aHasNum = Number.isFinite(aNum);
+      const bHasNum = Number.isFinite(bNum);
+      if (aHasNum && bHasNum) return dir * (aNum - bNum);
+      if (aHasNum && !bHasNum) return -1;
+      if (!aHasNum && bHasNum) return 1;
+      return dir * aCode.localeCompare(bCode);
+    });
+
+  const selectedCount = Object.keys(selectedIds).filter(id => selectedIds[id]).length;
+  const allVisibleSelected = visibleCategories.length > 0 && visibleCategories.every(c => selectedIds[c._id]);
+
+  const toggleSelectOne = (id) => {
+    setSelectedIds(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleSelectAllVisible = () => {
+    const shouldSelectAll = !allVisibleSelected;
+    setSelectedIds(prev => {
+      const next = { ...prev };
+      visibleCategories.forEach(c => {
+        next[c._id] = shouldSelectAll;
+      });
+      return next;
+    });
+  };
 
   return (
     <div className="admin-page categories">
@@ -216,21 +312,44 @@ const Categories = () => {
             </button>
           </div>
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          {activeTab === 'product' && (
-            <>
-              <button className="btn-secondary" onClick={handleDownloadTemplate}>📥 Download Template</button>
-              <BulkUpload endpoint={`/categories/bulk?type=${activeTab}`} onComplete={fetchCategories} label="Bulk Upload" />
-            </>
-          )}
-          {activeTab === 'blog' && (
-            <>
-              <button className="btn-secondary" onClick={handleDownloadTemplate}>📥 Download Template</button>
-              <BulkUpload endpoint={`/categories/bulk?type=${activeTab}`} onComplete={fetchCategories} label="Bulk Upload" />
-            </>
+        <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button className="btn-secondary" onClick={handleDownloadTemplate}>📥 Download Template</button>
+          <BulkUpload endpoint={`/categories/bulk?type=${activeTab}`} onComplete={fetchCategories} label="Bulk Upload" />
+          {selectedCount > 0 && (
+            <button className="btn-secondary" onClick={handleBulkDelete}>
+              🗑️ Delete Selected ({selectedCount})
+            </button>
           )}
           <button className="btn-primary" onClick={openAdd}>+ Add {activeTab === 'blog' ? 'Blog' : ''} Category</button>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', margin: '10px 0 20px' }}>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          placeholder="Search by name or code..."
+          style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #ddd', minWidth: '260px' }}
+        />
+
+        <select value={levelFilter} onChange={e => setLevelFilter(e.target.value)} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #ddd' }}>
+          <option value="all">All Levels</option>
+          <option value="root">Root</option>
+          <option value="sub">Sub</option>
+          <option value="nested">Nested</option>
+        </select>
+
+        <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #ddd' }}>
+          <option value="code">Sort: Code</option>
+          <option value="name">Sort: Name</option>
+          <option value="displayOrder">Sort: Order</option>
+        </select>
+
+        <select value={sortDir} onChange={e => setSortDir(e.target.value)} style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #ddd' }}>
+          <option value="asc">Asc</option>
+          <option value="desc">Desc</option>
+        </select>
       </div>
 
       {/* Root Categories Filter Pills */}
@@ -305,16 +424,23 @@ const Categories = () => {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Order</th>
-                <th>Category Name</th>
-                <th>Parent</th>
-                <th>Actions</th>
+                <th style={{ width: '50px' }}>
+                  <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAllVisible} />
+                </th>
+                <th style={{ width: '110px' }}>Code</th>
+                <th>Category</th>
+                <th style={{ width: '220px' }}>Level</th>
+                <th style={{ width: '90px' }}>Order</th>
+                <th style={{ width: '110px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredCategories.map(c => (
+              {visibleCategories.map(c => (
                 <tr key={c._id}>
-                  <td style={{ width: '80px', fontWeight: 800, color: '#ff6b00' }}>#{c.displayOrder || 0}</td>
+                  <td>
+                    <input type="checkbox" checked={!!selectedIds[c._id]} onChange={() => toggleSelectOne(c._id)} />
+                  </td>
+                  <td style={{ fontWeight: 800, color: '#333' }}>{c.codeNumber || '—'}</td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       {c.image ? (
@@ -350,15 +476,16 @@ const Categories = () => {
                       return <span className="status-pill processing">Nested under {subName} ({rootName})</span>;
                     })()}
                   </td>
+                  <td style={{ fontWeight: 800, color: '#ff6b00' }}>#{c.displayOrder || 0}</td>
                   <td>
                     <button className="btn-icon" onClick={() => openEdit(c)}>✏️</button>
                     <button className="btn-icon delete" onClick={() => handleDelete(c._id)}>🗑️</button>
                   </td>
                 </tr>
               ))}
-              {filteredCategories.length === 0 && (
+              {visibleCategories.length === 0 && (
                 <tr>
-                  <td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
                     No {activeTab} categories found.
                   </td>
                 </tr>
@@ -373,9 +500,15 @@ const Categories = () => {
           <div className="admin-modal">
             <h2>{editCategory ? 'Edit' : 'Add'} {activeTab === 'blog' ? 'Blog' : 'Product'} Category</h2>
             <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Category Name</label>
-                <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Code Number</label>
+                  <input type="text" value={formData.codeNumber} onChange={e => setFormData({ ...formData, codeNumber: e.target.value })} placeholder="e.g. 1111" />
+                </div>
+                <div className="form-group">
+                  <label>Category Name</label>
+                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+                </div>
               </div>
 
               <div className="form-group">

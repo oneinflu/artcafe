@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api';
 
-const SIZES = ['A4', 'A3', 'A2'];
 const MEDIA = ['Paper', 'Canvas'];
 
 const VolumetricWeights = () => {
@@ -11,6 +10,8 @@ const VolumetricWeights = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [matrix, setMatrix] = useState({});
+  const [sizeOptions, setSizeOptions] = useState(['A4', 'A3', 'A2']);
+  const [loadingSizes, setLoadingSizes] = useState(true);
 
   const roots = useMemo(() => {
     return categories.filter(c => !c.parentCategory);
@@ -25,10 +26,18 @@ const VolumetricWeights = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const data = await apiFetch('/categories?type=product');
-        setCategories(data);
+        const [catData, attrGroups] = await Promise.all([
+          apiFetch('/categories?type=product'),
+          apiFetch('/attributes')
+        ]);
+        setCategories(catData);
+
+        const group = (attrGroups || []).find(g => String(g?.name || '').toLowerCase().trim() === 'size of artwork');
+        const sizes = (group?.variations || []).map(v => String(v?.name || '').trim()).filter(Boolean);
+        if (sizes.length > 0) setSizeOptions(sizes);
       } finally {
         setLoading(false);
+        setLoadingSizes(false);
       }
     };
     load();
@@ -66,7 +75,7 @@ const VolumetricWeights = () => {
     if (!selectedSubId) return;
     setSaving(true);
     try {
-      for (const size of SIZES) {
+      for (const size of sizeOptions) {
         for (const medium of MEDIA) {
           const key = `${size}|${medium}`;
           const grams = matrix[key];
@@ -146,14 +155,19 @@ const VolumetricWeights = () => {
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Size</th>
+                  <th>Size of Artwork</th>
                   {MEDIA.map(m => (
                     <th key={m}>{m} (g)</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {SIZES.map(size => (
+                {loadingSizes ? (
+                  <tr>
+                    <td colSpan={MEDIA.length + 1} style={{ textAlign: 'center', padding: '25px', color: '#999' }}>Loading sizes...</td>
+                  </tr>
+                ) : (
+                  sizeOptions.map(size => (
                   <tr key={size}>
                     <td style={{ fontWeight: 800 }}>{size}</td>
                     {MEDIA.map(medium => {
@@ -161,23 +175,32 @@ const VolumetricWeights = () => {
                       const grams = matrix[key] ?? '';
                       return (
                         <td key={key}>
-                          <input
-                            type="number"
-                            value={grams}
-                            onChange={e => handleChange(size, medium, e.target.value)}
-                            placeholder="grams"
-                            style={{ width: '140px' }}
-                          />
-                          {grams !== '' && grams !== null && grams !== undefined && (
-                            <div style={{ fontSize: '0.75rem', color: '#888', marginTop: '4px' }}>
-                              {(Number(grams) / 1000).toFixed(3)} kg
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <input
+                              type="number"
+                              value={grams}
+                              onChange={e => handleChange(size, medium, e.target.value)}
+                              placeholder="grams"
+                              style={{
+                                width: '160px',
+                                padding: '10px 12px',
+                                borderRadius: '12px',
+                                border: '1px solid #e6e6e6',
+                                background: '#fcfcfc',
+                                fontWeight: 700,
+                                color: '#222'
+                              }}
+                            />
+                            <div style={{ fontSize: '0.75rem', color: '#888' }}>
+                              {grams !== '' && grams !== null && grams !== undefined ? `${(Number(grams) / 1000).toFixed(3)} kg` : '—'}
                             </div>
-                          )}
+                          </div>
                         </td>
                       );
                     })}
                   </tr>
-                ))}
+                ))
+                )}
               </tbody>
             </table>
           )}
