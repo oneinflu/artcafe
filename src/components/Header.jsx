@@ -332,20 +332,13 @@ const Header = ({
     <>
       <header className={`pm-header${isScrolled ? ' pm-header--scrolled' : ''}`}>
         {/* ── Top Bar ─────────────────────────── */}
-        <div className="pm-topbar">
-          <span className="pm-topbar-text">
-            Complimentary Art Consultation for Luxury Homes &amp; Designers
-          </span>
-          <Link to="/consultation" className="pm-topbar-cta">
-            Book Consultation
-          </Link>
-        </div>
+
 
         {/* ── Main Nav Bar ─────────────────────── */}
         <div className="pm-navbar">
           {/* Left Logo */}
           <Link to="/" className="pm-logo">
-            <span className="pm-logo-text">ARTCAFE</span>
+            <span className="pm-logo-text">Creatif</span>
             <span className="pm-logo-sub">FINE ART PRINT HOUSE</span>
           </Link>
 
