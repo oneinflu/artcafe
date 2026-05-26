@@ -919,62 +919,137 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
         </div>
       </section>
 
-      {displayRootCategories.length > 0 && (
-        <section className="curated-categories-section section">
-          <div className="container">
-            <div className="section-header-luxury centered">
-              <span className="subtitle gold">SHOP BY CATEGORY</span>
-              <h2 className="luxury-title-main">Root Categories</h2>
+      {/* SECTION: Designer / Architect Program */}
+      <section className="designer-architect-program-section">
+        <div className="dap-noise-overlay" />
+
+        <div className="dap-container">
+          <div className="dap-top-layout">
+            {/* Left Content (Editorial Statement) */}
+            <div className="dap-left-content">
+              <span className="dap-eyebrow">TRADE & DESIGNER PROGRAM</span>
+              <h2 className="dap-heading">
+                Built For<br />
+                Architects &<br />
+                Interior Designers
+              </h2>
+              <p className="dap-description">
+                From luxury villas to hospitality and premium apartments — we help designers curate art that belongs in the space.
+              </p>
+
+              {/* Stats Block */}
+              <div className="dap-stats-block">
+                <div className="dap-stat-item">
+                  <span className="dap-stat-value">500+</span>
+                  <span className="dap-stat-label">Design Partners</span>
+                </div>
+                <div className="dap-stat-item">
+                  <span className="dap-stat-value">20K+</span>
+                  <span className="dap-stat-label">Projects Styled</span>
+                </div>
+                <div className="dap-stat-item">
+                  <span className="dap-stat-value">35+</span>
+                  <span className="dap-stat-label">Cities</span>
+                </div>
+              </div>
             </div>
-            <div className="categories-grid-luxury">
-              {displayRootCategories.map((cat, i) => (
-                <Link key={cat._id || i} to={`/shop?category=${slugify(cat.name)}`} className="category-card-luxury" style={{ display: 'block', textDecoration: 'none' }}>
-                  <img src={cat.img} alt={cat.name} />
-                  <div className="cat-overlay">
-                    <h3>{cat.name}</h3>
-                    <span>{cat.count}</span>
-                    <button className="view-cat">EXPLORE CATEGORY</button>
+
+            {/* Right Content (Capabilities Grid) */}
+            <div className="dap-right-content">
+              <div className="dap-capabilities-grid">
+
+                {/* Card 1: White Glove Service */}
+                <div className="dap-card">
+                  <div className="dap-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 22h20M12 2v3M9 5h6M12 8a7 7 0 0 1 7 7v4H5v-4a7 7 0 0 1 7-7z" />
+                      <path d="M12 2v0" />
+                    </svg>
                   </div>
-                </Link>
-              ))}
+                  <h3 className="dap-card-title">White Glove Service</h3>
+                  <p className="dap-card-description">From curation to framing and installation, we manage the entire experience.</p>
+                </div>
+
+                {/* Card 2: Custom Sizing */}
+                <div className="dap-card">
+                  <div className="dap-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
+                    </svg>
+                  </div>
+                  <h3 className="dap-card-title">Custom Sizing</h3>
+                  <p className="dap-card-description">Tailored dimensions for villas, hotels and premium commercial interiors.</p>
+                </div>
+
+                {/* Card 3: Trade Pricing */}
+                <div className="dap-card">
+                  <div className="dap-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                      <circle cx="7.5" cy="7.5" r="1.5" />
+                    </svg>
+                  </div>
+                  <h3 className="dap-card-title">Trade Pricing</h3>
+                  <p className="dap-card-description">Preferential pricing for repeat projects, architects and bulk requirements.</p>
+                </div>
+
+                {/* Card 4: Dedicated Art Advisor */}
+                <div className="dap-card">
+                  <div className="dap-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M19 8v6M16 11h6" />
+                    </svg>
+                  </div>
+                  <h3 className="dap-card-title">Dedicated Art Advisor</h3>
+                  <p className="dap-card-description">One relationship manager for every project from start to finish.</p>
+                </div>
+
+                {/* Card 5: Room Mockups */}
+                <div className="dap-card">
+                  <div className="dap-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <path d="M21 15l-5-5L5 21" />
+                      <circle cx="9" cy="9" r="2" />
+                    </svg>
+                  </div>
+                  <h3 className="dap-card-title">Room Mockups</h3>
+                  <p className="dap-card-description">Visual previews before installation to ensure the perfect fit.</p>
+                </div>
+
+                {/* Card 6: Bulk Project Support */}
+                <div className="dap-card">
+                  <div className="dap-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                      <path d="M12 11v6M9 14h6" />
+                    </svg>
+                  </div>
+                  <h3 className="dap-card-title">Bulk Project Support</h3>
+                  <p className="dap-card-description">End-to-end support for hospitality, commercial and residential developments.</p>
+                </div>
+
+              </div>
             </div>
           </div>
-        </section>
-      )}
 
-      {/* SECTION 2: Horizontal Moving New Arrivals */}
-      <section className="new-arrivals-ticker-section">
-        <div className="ticker-header container">
-          <div className="header-text">
-            <span className="subtitle">NEW ARRIVALS</span>
-            <h2>Fresh From The Studio</h2>
-          </div>
-          <Link to="/shop" className="view-all-link">VIEW ALL PIECES &rarr;</Link>
-        </div>
-
-        <div className="ticker-container">
-          <div className="ticker-track">
-            {[...latestProducts, ...latestProducts, ...latestProducts, ...latestProducts].map((p, idx) => (
-              <Link key={`${p._id}-${idx}`} to={`/product/${slugify(p.name)}`} className="ticker-item">
-                <div className="ticker-image">
-                  <img
-                    src={resolveImageUrl(p.images?.[0], p._id)}
-                    alt={p.name}
-                    onError={(e) => e.target.src = 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800'}
-                  />
-                  <div className="ticker-overlay">
-                    <span>QUICK VIEW</span>
-                  </div>
-                </div>
-                <div className="ticker-info">
-                  <h4>{p.name}</h4>
-                  <p>₹{p.basePrice.toLocaleString()}</p>
-                </div>
-              </Link>
-            ))}
+          {/* Bottom CTA Band */}
+          <div className="dap-bottom-cta">
+            <div className="dap-cta-content">
+              <h2 className="dap-cta-heading">Are You An Architect or Interior Designer?</h2>
+              <p className="dap-cta-description">Join our exclusive Trade Programme for project pricing, dedicated advisory and white-glove support.</p>
+            </div>
+            <button className="dap-cta-btn" onClick={() => openTradeModal('Architect/Designer')}>
+              APPLY FOR TRADE ACCESS
+            </button>
           </div>
         </div>
       </section>
+
+
 
       {/* SECTION 3: Art belongs in every space (ArtCafe Inspired) */}
       <section className="about-luxury-section">
