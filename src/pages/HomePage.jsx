@@ -526,6 +526,150 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
         </div>
       </section>
 
+      {/* SECTION: Luxury Category Ecosystem */}
+      <section className="luxury-category-ecosystem-section">
+        <div className="lce-container">
+          
+          {/* Block 1: Signature Collections */}
+          <div className="lce-block lce-block--signature">
+            <div className="lce-heading">
+              <p className="lce-eyebrow">SIGNATURE COLLECTIONS</p>
+              <h2 className="lce-title">Curated For<br />Collectors &amp; Homes</h2>
+              <p className="lce-description">Explore museum-grade artworks crafted for spaces that deserve meaning.</p>
+            </div>
+            
+            <div className="lce-grid-asymmetrical">
+              {[
+                {
+                  title: "Fine Art Prints",
+                  pieces: "1200+ Pieces",
+                  image: "/assets/categories/fine-art.jpg",
+                  colSpan: 4,
+                  height: "620px",
+                  priority: "primary",
+                  link: "/shop?category=fine-art-prints"
+                },
+                {
+                  title: "Original Paintings",
+                  pieces: "280+ Pieces",
+                  image: "/assets/categories/original-paintings.jpg",
+                  colSpan: 4,
+                  height: "620px",
+                  priority: "primary",
+                  link: "/shop?category=original-paintings"
+                },
+                {
+                  title: "Limited Editions",
+                  pieces: "160+ Pieces",
+                  image: "/assets/categories/limited-edition.jpg",
+                  colSpan: 4,
+                  height: "620px",
+                  priority: "primary",
+                  link: "/shop?category=limited-editions"
+                },
+                {
+                  title: "Vintage Prints",
+                  pieces: "420+ Pieces",
+                  image: "/assets/categories/vintage.jpg",
+                  colSpan: 6,
+                  height: "420px",
+                  link: "/shop?category=vintage-prints"
+                },
+                {
+                  title: "Ceramic Plates",
+                  pieces: "170+ Pieces",
+                  image: "/assets/categories/ceramic.jpg",
+                  colSpan: 6,
+                  height: "420px",
+                  link: "/shop?category=ceramic-plates"
+                }
+              ].map((cat, idx) => (
+                <Link 
+                  key={idx} 
+                  to={cat.link} 
+                  className={`lce-card lce-card--span-${cat.colSpan}`}
+                  style={{ '--card-height': cat.height }}
+                >
+                  <img src={cat.image} alt={cat.title} className="lce-card-img" />
+                  <div className="lce-card-overlay" />
+                  <div className="lce-card-content">
+                    <span className="lce-card-pieces">{cat.pieces}</span>
+                    <h3 className="lce-card-title">{cat.title}</h3>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Block 2: Shop by Space */}
+          <div className="lce-block lce-block--space">
+            <div className="lce-heading lce-heading--space">
+              <p className="lce-eyebrow">SHOP BY SPACE</p>
+              <h2 className="lce-title">Find Art For Every Space</h2>
+            </div>
+            
+            <div className="lce-scroll-tray">
+              {[
+                "Living Room",
+                "Bedroom",
+                "Dining Room",
+                "Pooja Room",
+                "Entryway",
+                "Home Office",
+                "Commercial Spaces"
+              ].map((space, idx) => (
+                <Link 
+                  key={idx} 
+                  to={`/shop?space=${slugify(space)}`} 
+                  className="lce-space-card"
+                >
+                  <span className="lce-space-index">0{idx + 1}</span>
+                  <h3 className="lce-space-name">{space}</h3>
+                  <span className="lce-space-arrow">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Block 3: Secondary Categories */}
+          <div className="lce-block lce-block--secondary">
+            <div className="lce-heading lce-heading--secondary">
+              <p className="lce-eyebrow">MORE TO EXPLORE</p>
+              <h2 className="lce-title">Discover More</h2>
+            </div>
+            
+            <div className="lce-pill-grid">
+              {[
+                "Coasters & Table Mats",
+                "Stationary",
+                "Metallic Devotions",
+                "Luxury Gifting",
+                "Custom Framing",
+                "Corporate Art"
+              ].map((sec, idx) => (
+                <Link 
+                  key={idx} 
+                  to={`/shop?category=${slugify(sec)}`} 
+                  className="lce-pill-btn"
+                >
+                  <span>{sec}</span>
+                  <svg className="lce-pill-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="7" y1="17" x2="17" y2="7"></line>
+                    <polyline points="7 7 17 7 17 17"></polyline>
+                  </svg>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       {displayRootCategories.length > 0 && (
         <section className="curated-categories-section section">
           <div className="container">

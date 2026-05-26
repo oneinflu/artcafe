@@ -1669,6 +1669,350 @@ button {
   }
 }
 
+
+/* ══════════════════════════════════════════════════
+   LUXURY CATEGORY ECOSYSTEM — lce- namespace
+══════════════════════════════════════════════════ */
+.luxury-category-ecosystem-section {
+  background-color: #F8F6F2;
+  padding-top: 120px;
+  padding-bottom: 140px;
+  color: #171717;
+}
+
+.lce-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding-left: 72px;
+  padding-right: 72px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Common Headings */
+.lce-heading {
+  margin-bottom: 56px;
+  max-width: 600px;
+}
+
+.lce-eyebrow {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #B8965A;
+  margin-bottom: 18px;
+}
+
+.lce-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 500;
+  font-size: 54px;
+  line-height: 1.05;
+  color: #171717;
+  margin-bottom: 18px;
+}
+
+.lce-description {
+  font-family: 'Inter', sans-serif;
+  font-size: 18px;
+  line-height: 1.8;
+  color: rgba(23, 23, 23, 0.68);
+  max-width: 520px;
+}
+
+/* Block 1: Signature Grid */
+.lce-grid-asymmetrical {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 28px;
+}
+
+.lce-card {
+  position: relative;
+  border-radius: 30px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  text-decoration: none;
+  background-color: #E8E5DF;
+  box-shadow: 0 25px 90px rgba(0, 0, 0, 0.12);
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  height: var(--card-height);
+}
+
+.lce-card--span-4 {
+  grid-column: span 4;
+}
+
+.lce-card--span-6 {
+  grid-column: span 6;
+}
+
+.lce-card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+  z-index: 1;
+}
+
+.lce-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.22) 50%,
+    rgba(0, 0, 0, 0.85) 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+}
+
+.lce-card-content {
+  position: relative;
+  z-index: 3;
+  padding: 38px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.4s ease;
+}
+
+.lce-card-pieces {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.lce-card-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 32px;
+  font-weight: 500;
+  color: #FFFFFF;
+  letter-spacing: -0.5px;
+}
+
+/* Hover effects for Signature Grid */
+.lce-card:hover {
+  transform: translateY(-12px);
+  box-shadow: 0 35px 110px rgba(0, 0, 0, 0.2);
+}
+
+.lce-card:hover .lce-card-img {
+  transform: scale(1.08);
+}
+
+/* Block 2: Shop by Space */
+.lce-block--space {
+  margin-top: 140px;
+}
+
+.lce-heading--space {
+  margin-bottom: 48px;
+}
+
+.lce-scroll-tray {
+  display: flex;
+  gap: 22px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 24px;
+  margin-bottom: -24px;
+  scrollbar-width: none;
+}
+
+.lce-scroll-tray::-webkit-scrollbar {
+  display: none;
+}
+
+.lce-space-card {
+  min-width: 280px;
+  width: 280px;
+  height: 180px;
+  border-radius: 20px;
+  border: 1px solid rgba(184, 150, 90, 0.22);
+  background-color: rgba(255, 255, 255, 0.45);
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-decoration: none;
+  scroll-snap-align: start;
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.lce-space-index {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  color: #B8965A;
+}
+
+.lce-space-name {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 28px;
+  font-weight: 500;
+  color: #171717;
+  margin-top: auto;
+  margin-bottom: 4px;
+}
+
+.lce-space-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  color: #B8965A;
+  opacity: 0.4;
+  transform: translateX(-4px);
+  transition: all 0.35s ease;
+}
+
+/* Hover effects for Spaces scroll */
+.lce-space-card:hover {
+  background-color: #FFFFFF;
+  border-color: #B8965A;
+  box-shadow: 0 15px 35px rgba(184, 150, 90, 0.08);
+  transform: translateY(-4px);
+}
+
+.lce-space-card:hover .lce-space-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Block 3: Secondary Categories */
+.lce-block--secondary {
+  margin-top: 120px;
+}
+
+.lce-heading--secondary {
+  margin-bottom: 48px;
+}
+
+.lce-pill-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.lce-pill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(23, 23, 23, 0.08);
+  border-radius: 50px;
+  padding: 24px 36px;
+  text-decoration: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #171717;
+  transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.lce-pill-arrow {
+  color: #B8965A;
+  opacity: 0;
+  transform: translate(-4px, 4px);
+  transition: all 0.3s ease;
+}
+
+/* Hover effects for pills */
+.lce-pill-btn:hover {
+  background-color: #FFFFFF;
+  border-color: #B8965A;
+  box-shadow: 0 10px 25px rgba(23, 23, 23, 0.05);
+  transform: translateY(-2px);
+}
+
+.lce-pill-btn:hover .lce-pill-arrow {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+/* Responsive Styling */
+@media (max-width: 1100px) {
+  .lce-grid-asymmetrical {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .lce-card--span-4,
+  .lce-card--span-6 {
+    grid-column: span 1;
+  }
+  
+  .lce-card {
+    height: 520px !important;
+  }
+
+  .lce-pill-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .lce-title {
+    font-size: 46px;
+  }
+}
+
+@media (max-width: 768px) {
+  .luxury-category-ecosystem-section {
+    padding-top: 80px;
+    padding-bottom: 90px;
+  }
+
+  .lce-container {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .lce-grid-asymmetrical {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .lce-card--span-4,
+  .lce-card--span-6 {
+    grid-column: span 1;
+  }
+
+  .lce-card {
+    height: 440px !important;
+  }
+
+  .lce-title {
+    font-size: 38px;
+  }
+
+  .lce-pill-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .lce-block--space {
+    margin-top: 90px;
+  }
+
+  .lce-block--secondary {
+    margin-top: 90px;
+  }
+
+  .lce-pill-btn {
+    padding: 18px 28px;
+  }
+}
+
 /* SECTION 1: Luxury Cinematic Hero Slider */
 .hero-cinematic {
   position: relative;
