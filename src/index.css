@@ -2013,6 +2013,298 @@ button {
   }
 }
 
+
+/* ══════════════════════════════════════════════════
+   ART ADVISORY CONCIERGE — aac- namespace
+══════════════════════════════════════════════════ */
+.art-advisory-concierge-section {
+  position: relative;
+  background-color: #0A0A0A;
+  padding-top: 140px;
+  padding-bottom: 140px;
+  color: #F5F1EA;
+  overflow: hidden;
+}
+
+/* Ambient Gold Glow background effect */
+.aac-ambient-glow {
+  position: absolute;
+  top: 30%;
+  left: -10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(200, 169, 106, 0.05) 0%, rgba(200, 169, 106, 0) 70%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Fine noise texture */
+.aac-noise-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+  z-index: 1;
+  pointer-events: none;
+}
+
+.aac-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding-left: 72px;
+  padding-right: 72px;
+  display: flex;
+  gap: 48px;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+/* Left Column: Editorial Sticky content */
+.aac-left {
+  flex: 5;
+  position: sticky;
+  top: 120px;
+  align-self: flex-start;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+
+.aac-eyebrow {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #B8965A;
+  margin-bottom: 26px;
+}
+
+.aac-heading {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 500;
+  font-size: 76px;
+  line-height: 0.95;
+  letter-spacing: -1.5px;
+  color: #F5F1EA;
+  margin-bottom: 28px;
+}
+
+.aac-description {
+  font-family: 'Inter', sans-serif;
+  font-size: 20px;
+  line-height: 1.9;
+  color: rgba(245, 241, 234, 0.72);
+  margin-bottom: 44px;
+  max-width: 560px;
+}
+
+/* Trust Points */
+.aac-trust-points {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 44px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.aac-trust-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  color: #D7C29A;
+}
+
+.aac-trust-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #C8A96A;
+}
+
+/* CTA Button */
+.aac-cta-btn {
+  display: inline-block;
+  background-color: #C8A96A;
+  color: #111111;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 18px 38px;
+  border-radius: 0px;
+  transition: all 0.3s ease;
+  text-align: center;
+  width: fit-content;
+}
+
+.aac-cta-btn:hover {
+  background-color: #D8BA84;
+  transform: translateY(-2px);
+}
+
+/* Floating Testimonial Quote */
+.aac-quote-card {
+  margin-top: 56px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+  padding: 28px;
+  max-width: 480px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.aac-quote-text {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 20px;
+  font-style: italic;
+  line-height: 1.5;
+  color: #F5F1EA;
+  margin-bottom: 12px;
+}
+
+.aac-quote-author {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: rgba(245, 241, 234, 0.52);
+  text-transform: uppercase;
+}
+
+/* Right Column: Process Cards Grid */
+.aac-right {
+  flex: 7;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 28px;
+}
+
+.aac-card {
+  height: 420px;
+  background-color: #121212;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 30px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.aac-card-image-wrapper {
+  height: 220px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.aac-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.aac-card-content {
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+}
+
+.aac-card-step {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  color: #B8965A;
+  margin-bottom: 12px;
+}
+
+.aac-card-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: #F5F1EA;
+  margin-bottom: 10px;
+}
+
+.aac-card-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(245, 241, 234, 0.68);
+}
+
+/* Hover effects for Process Cards */
+.aac-card:hover {
+  transform: translateY(-10px);
+  border-color: rgba(200, 169, 106, 0.22);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+}
+
+.aac-card:hover .aac-card-img {
+  transform: scale(1.08);
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1100px) {
+  .aac-container {
+    flex-direction: column;
+    gap: 64px;
+  }
+
+  .aac-left {
+    width: 100%;
+    position: relative;
+    top: 0;
+    align-self: stretch;
+  }
+
+  .aac-heading {
+    font-size: 56px;
+  }
+
+  .aac-quote-card {
+    max-width: 100%;
+  }
+
+  .aac-card {
+    height: 380px;
+  }
+}
+
+@media (max-width: 768px) {
+  .art-advisory-concierge-section {
+    padding-top: 80px;
+    padding-bottom: 80px;
+  }
+
+  .aac-container {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .aac-heading {
+    font-size: 44px;
+  }
+
+  .aac-right {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    width: 100%;
+  }
+
+  .aac-card {
+    height: 340px;
+  }
+}
+
 /* SECTION 1: Luxury Cinematic Hero Slider */
 .hero-cinematic {
   position: relative;

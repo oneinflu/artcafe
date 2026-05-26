@@ -670,6 +670,96 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
         </div>
       </section>
 
+      {/* SECTION: Art Advisory Concierge */}
+      <section className="art-advisory-concierge-section">
+        {/* Ambient Gold Glow effect */}
+        <div className="aac-ambient-glow" />
+        {/* Subtle Noise Texture overlay */}
+        <div className="aac-noise-overlay" />
+
+        <div className="aac-container">
+          {/* Split Editorial Layout */}
+          
+          {/* Left Column (Editorial Text) */}
+          <div className="aac-left">
+            <p className="aac-eyebrow">ART ADVISORY · FREE OF CHARGE</p>
+            <h2 className="aac-heading">More Than Art.<br />A Curated Experience.</h2>
+            <p className="aac-description">From room visualisation to framing, placement and installation — our advisors help you choose art that truly belongs in your space.</p>
+            
+            {/* Trust Points */}
+            <ul className="aac-trust-points">
+              {[
+                "Free art consultation",
+                "Room mockups before buying",
+                "Museum-grade framing",
+                "Pan India white-glove delivery"
+              ].map((pt, idx) => (
+                <li key={idx} className="aac-trust-item">
+                  <span className="aac-trust-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </span>
+                  <span>{pt}</span>
+                </li>
+              ))}
+            </ul>
+
+            <Link to="/consultation" className="aac-cta-btn">
+              TALK TO AN ADVISOR
+            </Link>
+
+            {/* Testimonial Quote inside left content */}
+            <div className="aac-quote-card">
+              <p className="aac-quote-text">"The team understood exactly what our home needed — before we did."</p>
+              <p className="aac-quote-author">Luxury Villa Owner · Hyderabad</p>
+            </div>
+          </div>
+
+          {/* Right Column (Process Cards Grid) */}
+          <div className="aac-right">
+            {[
+              {
+                step: "01",
+                title: "Tell Us About Your Space",
+                description: "Upload room photos, share dimensions or simply tell us the mood you want to create.",
+                image: "/assets/advisory/room-brief.jpg"
+              },
+              {
+                step: "02",
+                title: "Receive Curated Recommendations",
+                description: "Our experts handpick artwork that matches your interiors, colours and aesthetic.",
+                image: "/assets/advisory/curated-art.jpg"
+              },
+              {
+                step: "03",
+                title: "Visualize Before You Buy",
+                description: "See mockups of artworks inside your room before making a final decision.",
+                image: "/assets/advisory/mockup-preview.jpg"
+              },
+              {
+                step: "04",
+                title: "Delivered & Installed",
+                description: "Museum-grade framing, secure packaging and white-glove support from start to finish.",
+                image: "/assets/advisory/delivery-installation.jpg"
+              }
+            ].map((card, idx) => (
+              <div key={idx} className="aac-card">
+                <div className="aac-card-image-wrapper">
+                  <img src={card.image} alt={card.title} className="aac-card-img" />
+                </div>
+                <div className="aac-card-content">
+                  <span className="aac-card-step">{card.step}</span>
+                  <h3 className="aac-card-title">{card.title}</h3>
+                  <p className="aac-card-desc">{card.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
       {displayRootCategories.length > 0 && (
         <section className="curated-categories-section section">
           <div className="container">
