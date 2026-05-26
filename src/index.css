@@ -50,6 +50,18 @@
   padding: 0;
   box-sizing: border-box;
 }
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.app-wrapper {
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
+}
 
 body {
   font-family: var(--font-main);
@@ -57,7 +69,6 @@ body {
   color: var(--color-text);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
 }
 
 h1, h2, h3, h4 {
@@ -1120,14 +1131,14 @@ button {
   position: absolute;
   bottom: 42px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, 20px);
   z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
   opacity: 0;
-  animation: lchFadeUp 0.9s ease 1.4s forwards;
+  animation: lchScrollCueFadeUp 0.9s ease 1.4s forwards;
 }
 
 .lch-scroll-text {
@@ -1159,6 +1170,10 @@ button {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes lchScrollCueFadeUp {
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
 @keyframes lchFadeLeft {
   to { opacity: 1; transform: translateX(0); }
 }
@@ -1171,25 +1186,76 @@ button {
 }
 
 @media (max-width: 768px) {
-  .lch-hero { height: 80vh; min-height: 580px; max-height: 700px; }
+  .lch-hero {
+    height: 85vh;
+    min-height: 560px;
+    max-height: 720px;
+  }
   .lch-container {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-    padding: 120px 28px 100px;
-    gap: 40px;
+    padding: 100px 24px 80px;
+    gap: 32px;
+    width: 100%;
+    box-sizing: border-box;
   }
-  .lch-heading { font-size: 52px; letter-spacing: -1px; }
-  .lch-desc { font-size: 17px; }
-  .lch-right { display: none; }
-  .lch-left { text-align: center; align-items: center; display: flex; flex-direction: column; }
-  .lch-buttons { justify-content: center; flex-wrap: wrap; }
+  .lch-left {
+    text-align: center;
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .lch-heading {
+    font-size: 44px;
+    line-height: 1.05;
+    letter-spacing: -1px;
+    margin-bottom: 20px;
+  }
+  .lch-desc {
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 32px;
+    max-width: 100%;
+  }
+  .lch-right {
+    display: none;
+  }
+  .lch-buttons {
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 320px;
+  }
+  .lch-btn-gold,
+  .lch-btn-glass {
+    width: 100%;
+    text-align: center;
+    padding: 16px 24px;
+    box-sizing: border-box;
+  }
   .lch-overlay-linear {
     background: linear-gradient(
       180deg,
-      rgba(7,7,7,0.55) 0%,
-      rgba(7,7,7,0.75) 100%
+      rgba(7,7,7,0.65) 0%,
+      rgba(7,7,7,0.85) 100%
     );
+  }
+  .lch-scroll-cue {
+    bottom: 20px;
+    gap: 8px;
+  }
+  .lch-scroll-text {
+    font-size: 9px;
+    letter-spacing: 2px;
+  }
+  .lch-scroll-circle {
+    width: 32px;
+    height: 32px;
   }
 }
 
@@ -1243,11 +1309,11 @@ button {
 
 .tb-logo-strip {
   margin-top: 56px;
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 54px;
-  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
+  gap: 24px 54px;
 }
 
 .tb-logo-item {
@@ -1288,22 +1354,26 @@ button {
 /* Responsive Styles for Trusted Brands */
 @media (max-width: 1024px) {
   .tb-logo-strip {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 38px;
+    gap: 20px 38px;
   }
 }
 
 @media (max-width: 768px) {
   .tb-container {
-    padding-left: 28px;
-    padding-right: 28px;
+    padding-left: 24px;
+    padding-right: 24px;
   }
   .tb-heading {
     font-size: 38px;
   }
   .tb-logo-strip {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 30px;
+    gap: 16px 28px;
+    margin-top: 36px;
+  }
+  .tb-logo-img {
+    width: auto;
+    max-width: 80px;
+    max-height: 32px;
   }
 }
 
@@ -5521,8 +5591,8 @@ button {
 /* FLOATING AI WIDGET */
 .floating-ai-widget {
   position: fixed;
-  bottom: 15px; /* Adjusted */
-  right: 10px;  /* Adjusted */
+  bottom: 10px;
+  right: 10px;
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -5684,12 +5754,12 @@ button {
 
 @media (max-width: 480px) {
   .ai-panel-content {
-    width: calc(100vw - 40px);
-    right: 20px;
+    width: calc(100vw - 20px);
+    right: 10px;
   }
   .floating-ai-widget {
-    right: 20px;
-    bottom: 20px;
+    right: 10px;
+    bottom: 10px;
   }
 }
 
@@ -8568,6 +8638,8 @@ button {
   padding-right: 72px;
   position: relative;
   z-index: 2;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .dap-top-layout {
@@ -8575,6 +8647,8 @@ button {
   grid-template-columns: repeat(12, 1fr);
   gap: 56px;
   align-items: start;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Left Sticky Column */
@@ -8583,6 +8657,8 @@ button {
   position: sticky;
   top: 120px;
   align-self: start;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .dap-eyebrow {
@@ -8618,7 +8694,8 @@ button {
 .dap-stats-block {
   display: flex;
   flex-direction: row;
-  gap: 36px;
+  flex-wrap: wrap;
+  gap: 16px 36px;
   margin-top: 40px;
 }
 
@@ -8647,12 +8724,17 @@ button {
 /* Right Capabilities Grid */
 .dap-right-content {
   grid-column: span 8;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .dap-capabilities-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 28px;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .dap-card {
@@ -8667,6 +8749,9 @@ button {
   justify-content: flex-start;
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
 }
 
 .dap-card::after {
@@ -8814,7 +8899,7 @@ button {
   }
   
   .dap-left-content {
-    grid-column: span 12;
+    grid-column: auto;
     position: relative;
     top: 0;
     align-self: auto;
@@ -8822,7 +8907,7 @@ button {
   }
   
   .dap-right-content {
-    grid-column: span 12;
+    grid-column: auto;
   }
   
   .dap-heading {
@@ -9476,7 +9561,7 @@ button {
   }
   
   .ji-featured-col {
-    grid-column: span 12;
+    grid-column: auto;
   }
   
   .ji-card--featured {
@@ -9484,7 +9569,7 @@ button {
   }
   
   .ji-secondary-col {
-    grid-column: span 12;
+    grid-column: auto;
   }
   
   .ji-secondary-grid {
