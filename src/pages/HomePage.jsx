@@ -7,7 +7,7 @@ import BASE_URL, { apiFetch } from '../api';
 
 const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces = [], collections = [] }) => {
   const homesScrollRef = useRef(null);
-  
+
   const scrollHomes = (direction) => {
     if (homesScrollRef.current) {
       const cardWidth = 370;
@@ -18,6 +18,28 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
         behavior: 'smooth'
       });
     }
+  };
+
+  const masterpiecesScrollRef = useRef(null);
+
+  const scrollMasterpieces = (direction) => {
+    if (masterpiecesScrollRef.current) {
+      const cardWidth = 360;
+      const cardGap = 26;
+      const scrollAmount = cardWidth + cardGap;
+      masterpiecesScrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const [wishlistedProducts, setWishlistedProducts] = useState({});
+  const toggleWishlist = (title) => {
+    setWishlistedProducts(prev => ({
+      ...prev,
+      [title]: !prev[title]
+    }));
   };
 
   const [sliderPos, setSliderPos] = useState(50);
@@ -31,14 +53,14 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
   ];
 
   const actualProducts = products && products.length > 0 ? products : dummyProducts;
-  
+
   // Dynamically fetch products assigned to 'New Arrivals' collection
   let newArrivals = actualProducts.filter(p => p.discoverCollection?.name === 'New Arrivals');
   if (newArrivals.length === 0) {
     newArrivals = actualProducts.slice(0, 8); // Fallback if no specific new arrivals exist yet
   }
   const latestProducts = newArrivals;
-  
+
   const [activeSlide, setActiveSlide] = useState(0);
   const [selectedMood, setSelectedMood] = useState(null); // null = All Moods
   const [selectedCaseStudy, setSelectedCaseStudy] = useState(null);
@@ -180,27 +202,27 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
 
   const displayCollections = collections && collections.length > 0
     ? collections.map((col, i) => {
-        const colProducts = actualProducts.filter(p => {
-          const colId = p.discoverCollection?._id || p.discoverCollection;
-          const colName = p.discoverCollection?.name;
-          return colId === col._id || (colName && colName.toLowerCase() === col.name.toLowerCase());
-        });
-        const img = colProducts[0]?.images?.[0]
-          ? resolveImageUrl(colProducts[0].images[0])
-          : fallbackCollectionImages[i % fallbackCollectionImages.length];
-        return {
-          _id: col._id,
-          name: col.name,
-          count: `${colProducts.length} Piece${colProducts.length === 1 ? '' : 's'}`,
-          img
-        };
-      })
+      const colProducts = actualProducts.filter(p => {
+        const colId = p.discoverCollection?._id || p.discoverCollection;
+        const colName = p.discoverCollection?.name;
+        return colId === col._id || (colName && colName.toLowerCase() === col.name.toLowerCase());
+      });
+      const img = colProducts[0]?.images?.[0]
+        ? resolveImageUrl(colProducts[0].images[0])
+        : fallbackCollectionImages[i % fallbackCollectionImages.length];
+      return {
+        _id: col._id,
+        name: col.name,
+        count: `${colProducts.length} Piece${colProducts.length === 1 ? '' : 's'}`,
+        img
+      };
+    })
     : [
-        { name: "Spiritual & Vedic", count: "124 Pieces", img: "https://images.unsplash.com/photo-1604871000636-074fa5117945?auto=format&fit=crop&q=80&w=800" },
-        { name: "Abstract Minimalist", count: "89 Pieces", img: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&q=80&w=800" },
-        { name: "Architectural Noir", count: "56 Pieces", img: "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&q=80&w=800" },
-        { name: "Heritage Landscapes", count: "210 Pieces", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800" }
-      ];
+      { name: "Spiritual & Vedic", count: "124 Pieces", img: "https://images.unsplash.com/photo-1604871000636-074fa5117945?auto=format&fit=crop&q=80&w=800" },
+      { name: "Abstract Minimalist", count: "89 Pieces", img: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&q=80&w=800" },
+      { name: "Architectural Noir", count: "56 Pieces", img: "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&q=80&w=800" },
+      { name: "Heritage Landscapes", count: "210 Pieces", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800" }
+    ];
 
   const fallbackRootCategoryImages = [
     "https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800",
@@ -213,26 +235,26 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
 
   const displayRootCategories = Array.isArray(categories)
     ? categories
-        .filter(c => (c.type || 'product') === 'product')
-        .filter(c => !c.parentCategory)
-        .map((cat, i) => {
-          const catId = (cat._id || '').toString();
-          const catProducts = actualProducts.filter(p => {
-            const pCat = p.category?._id || p.category;
-            return pCat && pCat.toString() === catId;
-          });
-          const img = cat.image
-            ? resolveImageUrl(cat.image)
-            : catProducts[0]?.images?.[0]
-              ? resolveImageUrl(catProducts[0].images[0])
-              : fallbackRootCategoryImages[i % fallbackRootCategoryImages.length];
-          return {
-            _id: cat._id,
-            name: cat.name,
-            count: `${catProducts.length} Piece${catProducts.length === 1 ? '' : 's'}`,
-            img
-          };
-        })
+      .filter(c => (c.type || 'product') === 'product')
+      .filter(c => !c.parentCategory)
+      .map((cat, i) => {
+        const catId = (cat._id || '').toString();
+        const catProducts = actualProducts.filter(p => {
+          const pCat = p.category?._id || p.category;
+          return pCat && pCat.toString() === catId;
+        });
+        const img = cat.image
+          ? resolveImageUrl(cat.image)
+          : catProducts[0]?.images?.[0]
+            ? resolveImageUrl(catProducts[0].images[0])
+            : fallbackRootCategoryImages[i % fallbackRootCategoryImages.length];
+        return {
+          _id: cat._id,
+          name: cat.name,
+          count: `${catProducts.length} Piece${catProducts.length === 1 ? '' : 's'}`,
+          img
+        };
+      })
     : [];
 
   // Trade Form States
@@ -341,7 +363,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 {
                   icon: (
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D0AE73" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/>
+                      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" /><path d="M9 21V12h6v9" />
                     </svg>
                   ),
                   number: '10,000+',
@@ -350,7 +372,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 {
                   icon: (
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D0AE73" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                      <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
                     </svg>
                   ),
                   number: 'Architect',
@@ -359,7 +381,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 {
                   icon: (
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D0AE73" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/><circle cx="12" cy="14" r="2"/>
+                      <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a4 4 0 0 0-8 0v2" /><circle cx="12" cy="14" r="2" />
                     </svg>
                   ),
                   number: 'Museum Grade',
@@ -368,7 +390,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 {
                   icon: (
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D0AE73" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><circle cx="12" cy="16" r="2"/><circle cx="20" cy="16" r="2"/>
+                      <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3" /><rect x="9" y="11" width="14" height="10" rx="1" /><circle cx="12" cy="16" r="2" /><circle cx="20" cy="16" r="2" />
                     </svg>
                   ),
                   number: 'Pan India',
@@ -392,7 +414,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
           <span className="lch-scroll-text">SCROLL TO DISCOVER</span>
           <div className="lch-scroll-circle">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8A96A" strokeWidth="2" strokeLinecap="round">
-              <path d="M12 5v14M5 12l7 7 7-7"/>
+              <path d="M12 5v14M5 12l7 7 7-7" />
             </svg>
           </div>
         </div>
@@ -438,7 +460,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
               <p className="srh-eyebrow">CURATED INSPIRATION</p>
               <h2 className="srh-heading">Art Styled Inside<br />Real Homes</h2>
               <p className="srh-description">Explore how our art comes to life in beautiful spaces across the country.</p>
-              
+
               <Link to="/spaces" className="srh-button">
                 View All Homes
               </Link>
@@ -446,8 +468,8 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
 
             {/* Navigation Arrows positioned on bottom of left content on desktop */}
             <div className="srh-navigation">
-              <button 
-                onClick={() => scrollHomes('left')} 
+              <button
+                onClick={() => scrollHomes('left')}
                 className="srh-nav-btn srh-nav-btn--left"
                 aria-label="Scroll left"
               >
@@ -456,8 +478,8 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                   <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
               </button>
-              <button 
-                onClick={() => scrollHomes('right')} 
+              <button
+                onClick={() => scrollHomes('right')}
                 className="srh-nav-btn srh-nav-btn--right"
                 aria-label="Scroll right"
               >
@@ -503,11 +525,11 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
             ].map((card, idx) => (
               <div key={idx} className="srh-card">
                 <img src={card.image} alt={`${card.title} in ${card.location}`} className="srh-card-img" />
-                
+
                 {/* Overlay Layers */}
                 <div className="srh-card-overlay-linear" />
                 <div className="srh-card-overlay-glass" />
-                
+
                 {/* Card Content */}
                 <div className="srh-card-content">
                   <span className="srh-card-location">{card.location}</span>
@@ -529,7 +551,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
       {/* SECTION: Luxury Category Ecosystem */}
       <section className="luxury-category-ecosystem-section">
         <div className="lce-container">
-          
+
           {/* Block 1: Signature Collections */}
           <div className="lce-block lce-block--signature">
             <div className="lce-heading">
@@ -537,7 +559,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
               <h2 className="lce-title">Curated For<br />Collectors &amp; Homes</h2>
               <p className="lce-description">Explore museum-grade artworks crafted for spaces that deserve meaning.</p>
             </div>
-            
+
             <div className="lce-grid-asymmetrical">
               {[
                 {
@@ -584,9 +606,9 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                   link: "/shop?category=ceramic-plates"
                 }
               ].map((cat, idx) => (
-                <Link 
-                  key={idx} 
-                  to={cat.link} 
+                <Link
+                  key={idx}
+                  to={cat.link}
                   className={`lce-card lce-card--span-${cat.colSpan}`}
                   style={{ '--card-height': cat.height }}
                 >
@@ -607,7 +629,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
               <p className="lce-eyebrow">SHOP BY SPACE</p>
               <h2 className="lce-title">Find Art For Every Space</h2>
             </div>
-            
+
             <div className="lce-scroll-tray">
               {[
                 "Living Room",
@@ -618,9 +640,9 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 "Home Office",
                 "Commercial Spaces"
               ].map((space, idx) => (
-                <Link 
-                  key={idx} 
-                  to={`/shop?space=${slugify(space)}`} 
+                <Link
+                  key={idx}
+                  to={`/shop?space=${slugify(space)}`}
                   className="lce-space-card"
                 >
                   <span className="lce-space-index">0{idx + 1}</span>
@@ -642,7 +664,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
               <p className="lce-eyebrow">MORE TO EXPLORE</p>
               <h2 className="lce-title">Discover More</h2>
             </div>
-            
+
             <div className="lce-pill-grid">
               {[
                 "Coasters & Table Mats",
@@ -652,9 +674,9 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 "Custom Framing",
                 "Corporate Art"
               ].map((sec, idx) => (
-                <Link 
-                  key={idx} 
-                  to={`/shop?category=${slugify(sec)}`} 
+                <Link
+                  key={idx}
+                  to={`/shop?category=${slugify(sec)}`}
                   className="lce-pill-btn"
                 >
                   <span>{sec}</span>
@@ -679,13 +701,13 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
 
         <div className="aac-container">
           {/* Split Editorial Layout */}
-          
+
           {/* Left Column (Editorial Text) */}
           <div className="aac-left">
             <p className="aac-eyebrow">ART ADVISORY · FREE OF CHARGE</p>
             <h2 className="aac-heading">More Than Art.<br />A Curated Experience.</h2>
             <p className="aac-description">From room visualisation to framing, placement and installation — our advisors help you choose art that truly belongs in your space.</p>
-            
+
             {/* Trust Points */}
             <ul className="aac-trust-points">
               {[
@@ -755,6 +777,143 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION: Featured Masterpieces */}
+      <section className="featured-masterpieces-section">
+        {/* Subtle noise overlay */}
+        <div className="fm-noise-overlay" />
+
+        <div className="fm-container">
+          {/* Header Row (Full Width) */}
+          <div className="fm-header-row">
+            <div className="fm-header-left">
+              <p className="fm-eyebrow">FEATURED MASTERPIECES</p>
+              <h2 className="fm-heading">Timeless Art. Curated With Intention.</h2>
+              <p className="fm-description">Museum-grade artworks selected by our curators for collectors, beautiful homes and meaningful spaces.</p>
+            </div>
+
+            <div className="fm-header-right">
+              <Link to="/collections" className="fm-cta-btn">
+                VIEW ALL ARTWORK
+              </Link>
+
+              {/* Navigation Circle Arrows */}
+              <div className="fm-navigation">
+                <button
+                  onClick={() => scrollMasterpieces('left')}
+                  className="fm-nav-btn fm-nav-btn--left"
+                  aria-label="Scroll left"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                </button>
+                <button
+                  onClick={() => scrollMasterpieces('right')}
+                  className="fm-nav-btn fm-nav-btn--right"
+                  aria-label="Scroll right"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Product Carousel Row (Full Width Below Header) */}
+          <div className="fm-right" ref={masterpiecesScrollRef}>
+            {[
+              {
+                title: "Pichwai Krishna",
+                artist: "Hand Embellished",
+                medium: "Canvas Print",
+                price: "₹48,000",
+                image: "/assets/masterpieces/pichwai-krishna.jpg",
+                badge: "Curator Pick",
+                link: "/shop?search=pichwai-krishna"
+              },
+              {
+                title: "Serene Buddha",
+                artist: "Canvas Print",
+                medium: "Museum Edition",
+                price: "₹36,000",
+                image: "/assets/masterpieces/buddha-serene.jpg",
+                badge: "Best Seller",
+                link: "/shop?search=buddha-serene"
+              },
+              {
+                title: "Royal Darbar",
+                artist: "Tanjore Art",
+                medium: "Premium Frame",
+                price: "₹52,000",
+                image: "/assets/masterpieces/royal-darbar.jpg",
+                badge: "Collector Edition",
+                link: "/shop?search=royal-darbar"
+              },
+              {
+                title: "Abstract Harmony",
+                artist: "Hand Embellished",
+                medium: "Gallery Canvas",
+                price: "₹42,000",
+                image: "/assets/masterpieces/abstract-harmony.jpg",
+                badge: "Limited Edition",
+                link: "/shop?search=abstract-harmony"
+              },
+              {
+                title: "Lotus Pond",
+                artist: "Canvas Print",
+                medium: "Premium Edition",
+                price: "₹28,000",
+                image: "/assets/masterpieces/lotus-pond.jpg",
+                badge: "New Arrival",
+                link: "/shop?search=lotus-pond"
+              }
+            ].map((prod, idx) => {
+              const isFav = !!wishlistedProducts[prod.title];
+              return (
+                <div key={idx} className="fm-card">
+                  {/* Image Section */}
+                  <div className="fm-card-image-sec">
+                    <img src={prod.image} alt={prod.title} className="fm-card-img" />
+
+                    {/* Badge */}
+                    {prod.badge && (
+                      <span className="fm-card-badge">{prod.badge}</span>
+                    )}
+
+                    {/* Wishlist Button */}
+                    <button
+                      onClick={() => toggleWishlist(prod.title)}
+                      className={`fm-card-wishlist ${isFav ? 'fm-card-wishlist--active' : ''}`}
+                      aria-label="Add to wishlist"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill={isFav ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                      </svg>
+                    </button>
+
+                    {/* Quick Actions (revealed on hover) */}
+                    <div className="fm-card-actions">
+                      <Link to={prod.link} className="fm-action-btn fm-action-btn--ghost">Quick View</Link>
+                      <Link to={prod.link} className="fm-action-btn fm-action-btn--primary">View Details</Link>
+                    </div>
+                  </div>
+
+                  {/* Product Info */}
+                  <div className="fm-card-info">
+                    <h3 className="fm-card-title">{prod.title}</h3>
+                    <p className="fm-card-meta">{prod.artist} · {prod.medium}</p>
+                    <p className="fm-card-price">{prod.price}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
         </div>
@@ -829,7 +988,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
             </div>
             <div className="collage-badge">
               <span className="years">11+</span>
-              <span className="text">Years of<br/>Curating</span>
+              <span className="text">Years of<br />Curating</span>
             </div>
           </div>
 
@@ -979,14 +1138,14 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
             // Image fallbacks keyed by space name (case-insensitive)
             const spaceImages = {
               'living room': 'https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg?auto=compress&cs=tinysrgb&w=800',
-              'office':      'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800',
-              'villa':       'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80&w=800',
-              'temple':      'https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800',
+              'office': 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800',
+              'villa': 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&q=80&w=800',
+              'temple': 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800',
               'temple / spiritual space': 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800',
-              'bedroom':     'https://images.unsplash.com/photo-1560184897-67f4a3f9a7fa?auto=format&fit=crop&q=80&w=800',
-              'dining':      'https://images.unsplash.com/photo-1617098900591-3f90928e8c54?auto=format&fit=crop&q=80&w=800',
-              'hotel':       'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800',
-              'lobby':       'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?auto=format&fit=crop&q=80&w=800',
+              'bedroom': 'https://images.unsplash.com/photo-1560184897-67f4a3f9a7fa?auto=format&fit=crop&q=80&w=800',
+              'dining': 'https://images.unsplash.com/photo-1617098900591-3f90928e8c54?auto=format&fit=crop&q=80&w=800',
+              'hotel': 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800',
+              'lobby': 'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?auto=format&fit=crop&q=80&w=800',
             };
             const defaultImg = 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=800';
 
@@ -1266,9 +1425,9 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
               return (
                 <div className="project-card large" style={{ cursor: 'pointer' }} onClick={() => setSelectedCaseStudy(project)}>
                   <div className="project-image">
-                    <img 
-                      src={resolveImageUrl(project.featuredImage)} 
-                      alt={project.title} 
+                    <img
+                      src={resolveImageUrl(project.featuredImage)}
+                      alt={project.title}
                       onError={e => e.target.src = "https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=1200"}
                     />
                     <div className="project-overlay">
@@ -1294,9 +1453,9 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 return (
                   <div className="project-card small" style={{ cursor: 'pointer' }} onClick={() => setSelectedCaseStudy(project)}>
                     <div className="project-image">
-                      <img 
-                        src={resolveImageUrl(project.featuredImage)} 
-                        alt={project.title} 
+                      <img
+                        src={resolveImageUrl(project.featuredImage)}
+                        alt={project.title}
                         onError={e => e.target.src = "https://images.pexels.com/photos/2724749/pexels-photo-2724749.jpeg?auto=compress&cs=tinysrgb&w=800"}
                       />
                       <div className="project-overlay">
@@ -1320,9 +1479,9 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 return (
                   <div className="project-card small" style={{ cursor: 'pointer' }} onClick={() => setSelectedCaseStudy(project)}>
                     <div className="project-image">
-                      <img 
-                        src={resolveImageUrl(project.featuredImage)} 
-                        alt={project.title} 
+                      <img
+                        src={resolveImageUrl(project.featuredImage)}
+                        alt={project.title}
                         onError={e => e.target.src = "https://images.pexels.com/photos/1125130/pexels-photo-1125130.jpeg?auto=compress&cs=tinysrgb&w=800"}
                       />
                       <div className="project-overlay">
@@ -1461,8 +1620,8 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                   <span className="trade-tag">{card.tag}</span>
                   <h3>{card.title}</h3>
                   <p>{card.desc}</p>
-                  <button 
-                    onClick={() => openTradeModal(card.role)} 
+                  <button
+                    onClick={() => openTradeModal(card.role)}
                     className="trade-link"
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'none', display: 'inline-block' }}
                   >
@@ -1478,10 +1637,10 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
             <div className="logo-strip" style={{ display: 'flex', flexWrap: 'wrap', gap: '30px', alignItems: 'center', justifyContent: 'center' }}>
               {brandLogos && brandLogos.length > 0 ? (
                 brandLogos.map(logo => (
-                  <img 
-                    key={logo._id} 
-                    src={logo.image.startsWith('http') ? logo.image : `${BASE_URL}${logo.image}`} 
-                    alt={logo.name} 
+                  <img
+                    key={logo._id}
+                    src={logo.image.startsWith('http') ? logo.image : `${BASE_URL}${logo.image}`}
+                    alt={logo.name}
                     title={logo.name}
                     style={{
                       maxHeight: '40px',
@@ -1516,9 +1675,9 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
             </div>
             <div className="logo-footer">
               <p>Art enhances every workspace — let us curate yours.</p>
-              <button 
-                onClick={() => openTradeModal('Other')} 
-                className="join-trade" 
+              <button
+                onClick={() => openTradeModal('Other')}
+                className="join-trade"
                 style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-block' }}
               >
                 JOIN THE TRADE PROGRAMME →
@@ -1564,8 +1723,8 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
             <p>Whether you're buying one print or furnishing an entire building — an art advisor is included. Free, always.</p>
             <div className="advisory-cta">
               <button className="speak-btn" onClick={() => setIsAdvisoryModalOpen(true)}>SPEAK TO AN ADVISOR</button>
-              <button 
-                onClick={() => setIsAdvisoryModalOpen(true)} 
+              <button
+                onClick={() => setIsAdvisoryModalOpen(true)}
                 className="learn-more"
                 style={{ background: 'none', border: 'none', color: '#ff6b00', cursor: 'pointer', fontWeight: 600 }}
               >
@@ -1581,7 +1740,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
         <div className="luxury-modal-overlay" onClick={() => setIsAdvisoryModalOpen(false)}>
           <div className="luxury-modal-content" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close-btn" onClick={() => setIsAdvisoryModalOpen(false)}>&times;</button>
-            
+
             {advisorySubmitSuccess ? (
               <div className="modal-success-state">
                 <div className="success-checkmark">&#10003;</div>
@@ -1594,39 +1753,39 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 <p className="form-subtitle">Tell us about your space. We'll curate a bespoke catalog tailored to your brief, free of charge.</p>
 
                 <div className="form-group-luxury">
-                  <input 
-                    type="text" 
-                    required 
+                  <input
+                    type="text"
+                    required
                     placeholder="Full Name"
-                    value={advisoryForm.name} 
+                    value={advisoryForm.name}
                     onChange={e => setAdvisoryForm({ ...advisoryForm, name: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group-luxury">
-                  <input 
-                    type="email" 
-                    required 
+                  <input
+                    type="email"
+                    required
                     placeholder="Email Address"
-                    value={advisoryForm.email} 
+                    value={advisoryForm.email}
                     onChange={e => setAdvisoryForm({ ...advisoryForm, email: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group-luxury">
-                  <input 
-                    type="tel" 
-                    required 
+                  <input
+                    type="tel"
+                    required
                     placeholder="Phone Number"
-                    value={advisoryForm.phone} 
+                    value={advisoryForm.phone}
                     onChange={e => setAdvisoryForm({ ...advisoryForm, phone: e.target.value })}
                   />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
                   <div className="form-group-luxury" style={{ marginBottom: 0 }}>
-                    <select 
-                      value={advisoryForm.spaceType} 
+                    <select
+                      value={advisoryForm.spaceType}
                       onChange={e => setAdvisoryForm({ ...advisoryForm, spaceType: e.target.value })}
                     >
                       <option value="">Select Space Type...</option>
@@ -1640,8 +1799,8 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                   </div>
 
                   <div className="form-group-luxury" style={{ marginBottom: 0 }}>
-                    <select 
-                      value={advisoryForm.preferredStyle} 
+                    <select
+                      value={advisoryForm.preferredStyle}
                       onChange={e => setAdvisoryForm({ ...advisoryForm, preferredStyle: e.target.value })}
                     >
                       <option value="">Select Preferred Style...</option>
@@ -1655,8 +1814,8 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 </div>
 
                 <div className="form-group-luxury">
-                  <select 
-                    value={advisoryForm.budgetRange} 
+                  <select
+                    value={advisoryForm.budgetRange}
                     onChange={e => setAdvisoryForm({ ...advisoryForm, budgetRange: e.target.value })}
                   >
                     <option value="">Select Estimated Budget Range...</option>
@@ -1668,18 +1827,18 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
                 </div>
 
                 <div className="form-group-luxury">
-                  <textarea 
+                  <textarea
                     rows="3"
                     required
                     placeholder="Describe your dimensions, preferred themes, color palettes, or any custom requirements..."
-                    value={advisoryForm.brief} 
+                    value={advisoryForm.brief}
                     onChange={e => setAdvisoryForm({ ...advisoryForm, brief: e.target.value })}
                   />
                 </div>
 
-                <button 
-                  type="submit" 
-                  className="submit-trade-btn" 
+                <button
+                  type="submit"
+                  className="submit-trade-btn"
                   disabled={advisorySubmitting}
                 >
                   {advisorySubmitting ? 'SUBMITTING BRIEF...' : 'SUBMIT BRIEF'}
@@ -1700,9 +1859,9 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
           </div>
           <div className="newsletter-form-zone">
             <form onSubmit={handleNewsSubscribe} className="newsletter-input-group">
-              <input 
-                type="email" 
-                placeholder="Your email address" 
+              <input
+                type="email"
+                placeholder="Your email address"
                 value={newsEmail}
                 onChange={(e) => setNewsEmail(e.target.value)}
                 disabled={newsStatus === 'submitting'}
@@ -1713,9 +1872,9 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
               </button>
             </form>
             {newsMessage && (
-              <p style={{ 
-                marginTop: '10px', 
-                fontSize: '13px', 
+              <p style={{
+                marginTop: '10px',
+                fontSize: '13px',
                 color: newsStatus === 'success' ? 'var(--color-gold)' : '#ff6b00',
                 transition: 'all 0.3s'
               }}>
@@ -1912,7 +2071,7 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
         <div className="luxury-modal-overlay" onClick={() => setIsTradeModalOpen(false)}>
           <div className="luxury-modal-content" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close-btn" onClick={() => setIsTradeModalOpen(false)}>&times;</button>
-            
+
             {tradeSubmitStatus.success ? (
               <div className="modal-success-state">
                 <div className="success-checkmark">&#10003;</div>
