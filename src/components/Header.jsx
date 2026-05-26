@@ -1,216 +1,449 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { slugify, resolveImageUrl } from '../utils/helpers';
 
-const Header = ({ isScrolled, showSearch, setShowSearch, searchQuery, setSearchQuery, searchResults, openCart, cartCount, openAuth, openDash, user, onLogout, categories = [], spaces = [], styles = [], collections = [] }) => {
-  const [activeDropdown, setActiveDropdown] = useState(null);
+/* ─────────────────────────────────────────────
+   Navigation data mirroring the JSON spec
+───────────────────────────────────────────── */
+const NAV_ITEMS = [
+  {
+    label: 'Discover',
+    type: 'mega-menu',
+    columns: [
+      {
+        title: 'Explore',
+        links: ['New Arrivals', 'Best Sellers', 'Curated Collections', 'Featured Masterpieces'],
+      },
+      {
+        title: 'By Style',
+        links: ['Quiet Luxury', 'Heritage India', 'Modern Statement', 'Spiritual Calm'],
+      },
+    ],
+  },
+  {
+    label: 'By Space',
+    type: 'mega-menu',
+    links: ['Living Room', 'Dining Room', 'Bedroom', 'Temple Space', 'Villa Entrance', 'Office'],
+  },
+  {
+    label: 'Curated Homes',
+    url: '/styled-homes',
+  },
+  {
+    label: 'For Designers',
+    type: 'mega-menu',
+    links: ['Architect Program', 'Interior Designers', 'Trade Pricing', 'Bulk Orders'],
+  },
+  {
+    label: 'Art Advisory',
+    url: '/art-advisory',
+  },
+  {
+    label: 'Journal',
+    url: '/journal',
+  },
+];
 
-  const fallbackCollectionNames = [
-    'New Arrivals',
-    'Curated Collections',
-    'Best Sellers',
-    'Limited Drops',
-    'Luxury Collection',
-    'Affordable Collection',
-    'Spiritual Collection',
-    'Founder Picks'
-  ];
+/* ─────────────────────────────────────────────
+   SVG Icons
+───────────────────────────────────────────── */
+const SearchIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
 
-  // Collections list
-  const collectionList = collections.length > 0 
-    ? collections.map(c => c.name) 
-    : fallbackCollectionNames;
+const HeartIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+);
 
-  // Spaces list
-  const spaceList = spaces.length > 0 
-    ? spaces.map(s => s.name) 
-    : [
-        'Living Room', 'Dining', 'Bedroom', 'Office', 'Villa', 'Hotel', 'Lobby', 'Temple / Spiritual Space'
-      ];
+const BagIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <path d="M16 10a4 4 0 0 1-8 0" />
+  </svg>
+);
 
-  // Styles list
-  const styleList = styles.length > 0 
-    ? styles.map(s => s.name) 
-    : [
-        'Quiet Luxury', 'Old Money', 'Modern Luxury', 'Spiritual', 'Bold Statement', 'Minimal', 'Royal', 'Contemporary'
-      ];
+const ChevronDown = () => (
+  <svg width="9" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 1L5 5L9 1" />
+  </svg>
+);
 
-  const navItems = [
-    {
-      label: 'Collections',
-      dropdown: collectionList,
-      queryParam: 'collection'
-    },
-    {
-      label: 'Shop by Space',
-      dropdown: spaceList,
-      queryParam: 'space'
-    },
-    {
-      label: 'Shop by Style',
-      dropdown: styleList,
-      queryParam: 'style'
-    },
-    {
-      label: 'Artists',
-      dropdown: ['Artist cover stories', 'Profiles', 'Interviews', 'Collections'],
-      queryParam: 'artist'
-    }
-  ];
+const CloseIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const HamburgerIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
+/* ─────────────────────────────────────────────
+   Mega-Menu Panel (columns or single list)
+───────────────────────────────────────────── */
+const MegaMenuPanel = ({ item, isOpen, scrolled }) => {
+  if (!isOpen) return null;
+
+  const hasColumns = item.columns && item.columns.length > 0;
 
   return (
-    <header className={`header-luxury `}>
-      <div className="header-top-bar" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', padding: '8px 20px' }}>
-        <p style={{ margin: 0 }}>Complementary Virtual Art Consultation for Architects & Interior Designers</p>
-        <Link to="/architect-program" className="nav-link-luxury trade-cta" style={{ fontSize: '0.75rem', padding: '4px 10px', height: 'auto', background: 'transparent', border: '1px solid #d4af37', color: '#d4af37' }}>
-          <span className="trade-badge" style={{ background: '#d4af37', color: '#000' }}>PRO</span> Architect Program
-        </Link>
-      </div>
-      <div className="header-inner">
-        <div className="nav-left desktop-only" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '25px', minWidth: 0 }}>
-          {navItems.map((item, idx) => (
-            <div
-              key={idx}
-              className="nav-item-wrapper"
-              onMouseEnter={() => setActiveDropdown(item.label)}
-              onMouseLeave={() => setActiveDropdown(null)}
-            >
-              <span className="nav-link-luxury">
-                {item.label}
-                <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </span>
-              <div className={`luxury-dropdown ${activeDropdown === item.label ? 'active' : ''}`}>
-                <div className="dropdown-grid">
-                  {item.dropdown.map((sub, sidx) => (
-                    <Link key={sidx} to={`/shop?${item.queryParam}=${slugify(sub)}`} className="dropdown-link">
-                      {sub}
+    <div className={`pm-mega-panel${isOpen ? ' pm-mega-panel--open' : ''}`}>
+      <div className="pm-mega-inner">
+        {hasColumns ? (
+          item.columns.map((col, ci) => (
+            <div key={ci} className="pm-mega-col">
+              <p className="pm-mega-col-title">{col.title}</p>
+              <ul>
+                {col.links.map((link, li) => (
+                  <li key={li}>
+                    <Link to={`/shop?q=${slugify(link)}`} className="pm-mega-link">
+                      {link}
                     </Link>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <Link to="/" className="logo-luxury" style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 40px' }}>
-          <span className="logo-text">ARTCAFE</span>
-          <span className="logo-subtitle">FINE ART PRINT HOUSE</span>
-        </Link>
-
-        <div className="header-col-right" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '30px', justifyContent: 'flex-end', minWidth: 0 }}>
-          <div className="nav-right desktop-only" style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: '25px' }}>
-            <Link to="/rentals" className="nav-link-luxury" style={{ color: '#d4af37', fontWeight: 600, borderBottom: '1.5px solid #d4af37', paddingBottom: '2px' }}>Rent Artwork</Link>
-            <Link to="/about" className="nav-link-luxury">About</Link>
-            <div
-              className="nav-item-wrapper"
-              onMouseEnter={() => setActiveDropdown('More')}
-              onMouseLeave={() => setActiveDropdown(null)}
-            >
-              <span className="nav-link-luxury">
-                More
-                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ marginLeft: '6px' }}><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </span>
-              <div className={`luxury-dropdown right-aligned ${activeDropdown === 'More' ? 'active' : ''}`}>
-                <div className="dropdown-grid single-col">
-                  <Link to="/events" className="dropdown-link">Events</Link>
-                  <Link to="/journal" className="dropdown-link">Blog / Journal</Link>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="actions-luxury" style={{ flexShrink: 0 }}>
-            <button className="icon-btn-luxury search-trigger" onClick={() => setShowSearch(!showSearch)}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            </button>
-
-            <Link to="/wishlist" className="icon-btn-luxury wishlist-btn">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-              <span className="label desktop-only">Wishlist</span>
-            </Link>
-
-            <div className="cart-trigger-luxury" onClick={openCart}>
-              <button className="icon-btn-luxury">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
-                {cartCount > 0 && <span className="cart-count-luxury">{cartCount}</span>}
-              </button>
-            </div>
-
-            <button className="mobile-menu-trigger mobile-only">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {showSearch && (
-        <div className="luxury-search-overlay animate-fade-in">
-          <button className="close-search-top" onClick={() => setShowSearch(false)}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          </button>
-          
-          <div className="container search-content-wrapper">
-            <div className="search-input-group">
-              <input
-                type="text"
-                placeholder="Search our curated collection..."
-                autoFocus
-                className="luxury-search-input"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <div className="search-underline"></div>
-            </div>
-
-            {!searchQuery && (
-              <div className="mood-discovery">
-                <h3 className="mood-title">What moves you today?</h3>
-                <div className="mood-grid">
-                  {[
-                    { label: 'All moods', icon: '✦', count: '500+' },
-                    { label: 'Calm', icon: '🕊', count: '84 works' },
-                    { label: 'Dramatic', icon: '⚡', count: '62 works' },
-                    { label: 'Spiritual', icon: '🙏', count: '118 works' },
-                    { label: 'Natural', icon: '🌿', count: '76 works' },
-                    { label: 'Bold', icon: '🔥', count: '48 works' },
-                    { label: 'Minimal', icon: '◯', count: '56 works' }
-                  ].map((mood, i) => (
-                    <Link key={i} to={`/shop?mood=${slugify(mood.label)}`} className="mood-item">
-                      <span className="mood-icon">{mood.icon}</span>
-                      <div className="mood-meta">
-                        <span className="mood-label">{mood.label}</span>
-                        <span className="mood-count">{mood.count}</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {searchQuery && searchResults.length > 0 && (
-              <div className="luxury-search-results">
-                {searchResults.map(result => (
-                  <Link
-                    key={result._id}
-                    to={`/product/${slugify(result.name)}`}
-                    className="luxury-result-item"
-                    onClick={() => setShowSearch(false)}
-                  >
-                    <img src={resolveImageUrl(result.images?.[0])} alt={result.name} />
-                    <div className="result-meta">
-                      <span className="name">{result.name}</span>
-                      <span className="price">₹{result.basePrice}</span>
-                    </div>
-                  </Link>
+                  </li>
                 ))}
+              </ul>
+            </div>
+          ))
+        ) : (
+          <div className="pm-mega-col">
+            <ul>
+              {(item.links || []).map((link, li) => (
+                <li key={li}>
+                  <Link to={`/shop?q=${slugify(link)}`} className="pm-mega-link">
+                    {link}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   Mobile Drawer
+───────────────────────────────────────────── */
+const MobileDrawer = ({ isOpen, onClose, cartCount, openCart, showSearch, setShowSearch }) => {
+  const [expandedItem, setExpandedItem] = useState(null);
+
+  return (
+    <>
+      <div
+        className={`pm-drawer-overlay${isOpen ? ' pm-drawer-overlay--open' : ''}`}
+        onClick={onClose}
+      />
+      <div className={`pm-drawer${isOpen ? ' pm-drawer--open' : ''}`}>
+        {/* Drawer Header */}
+        <div className="pm-drawer-header">
+          <Link to="/" className="pm-drawer-logo" onClick={onClose}>
+            <span className="pm-drawer-logo-text">ARTCAFE</span>
+            <span className="pm-drawer-logo-sub">FINE ART PRINT HOUSE</span>
+          </Link>
+          <button className="pm-drawer-close" onClick={onClose} aria-label="Close menu">
+            <CloseIcon />
+          </button>
+        </div>
+
+        {/* Nav Items */}
+        <nav className="pm-drawer-nav">
+          {NAV_ITEMS.map((item, idx) => {
+            const hasSub = item.type === 'mega-menu';
+            const isExpanded = expandedItem === idx;
+            const allLinks = item.columns
+              ? item.columns.flatMap(c => c.links)
+              : item.links || [];
+
+            return (
+              <div key={idx} className="pm-drawer-item">
+                {hasSub ? (
+                  <>
+                    <button
+                      className={`pm-drawer-nav-btn${isExpanded ? ' pm-drawer-nav-btn--open' : ''}`}
+                      onClick={() => setExpandedItem(isExpanded ? null : idx)}
+                    >
+                      {item.label}
+                      <span className={`pm-drawer-chevron${isExpanded ? ' pm-drawer-chevron--open' : ''}`}>
+                        <ChevronDown />
+                      </span>
+                    </button>
+                    <div className={`pm-drawer-sub${isExpanded ? ' pm-drawer-sub--open' : ''}`}>
+                      {item.columns
+                        ? item.columns.map((col, ci) => (
+                          <div key={ci} className="pm-drawer-sub-group">
+                            <span className="pm-drawer-sub-title">{col.title}</span>
+                            {col.links.map((link, li) => (
+                              <Link key={li} to={`/shop?q=${slugify(link)}`} className="pm-drawer-sub-link" onClick={onClose}>
+                                {link}
+                              </Link>
+                            ))}
+                          </div>
+                        ))
+                        : allLinks.map((link, li) => (
+                          <Link key={li} to={`/shop?q=${slugify(link)}`} className="pm-drawer-sub-link" onClick={onClose}>
+                            {link}
+                          </Link>
+                        ))
+                      }
+                    </div>
+                  </>
+                ) : (
+                  <Link to={item.url || '/'} className="pm-drawer-nav-link" onClick={onClose}>
+                    {item.label}
+                  </Link>
+                )}
               </div>
-            )}
+            );
+          })}
+        </nav>
+
+        {/* Footer CTA */}
+        <div className="pm-drawer-footer">
+          <Link to="/consultation" className="pm-cta-btn" onClick={onClose}>
+            Book Consultation
+          </Link>
+        </div>
+      </div>
+    </>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   Search Overlay
+───────────────────────────────────────────── */
+const SearchOverlay = ({ isOpen, onClose, searchQuery, setSearchQuery, searchResults }) => {
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen]);
+
+  return (
+    <div className={`pm-search-overlay${isOpen ? ' pm-search-overlay--open' : ''}`}>
+      <button className="pm-search-close" onClick={onClose} aria-label="Close search">
+        <CloseIcon />
+      </button>
+      <div className="pm-search-inner">
+        <div className="pm-search-field">
+          <SearchIcon />
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Search our curated collection..."
+            className="pm-search-input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="pm-search-underline" />
+
+        {!searchQuery && (
+          <div className="pm-mood-grid">
+            {[
+              { label: 'All moods', icon: '✦', count: '500+' },
+              { label: 'Calm', icon: '🕊', count: '84 works' },
+              { label: 'Dramatic', icon: '⚡', count: '62 works' },
+              { label: 'Spiritual', icon: '🙏', count: '118 works' },
+              { label: 'Natural', icon: '🌿', count: '76 works' },
+              { label: 'Bold', icon: '🔥', count: '48 works' },
+              { label: 'Minimal', icon: '◯', count: '56 works' },
+            ].map((mood, i) => (
+              <Link key={i} to={`/shop?mood=${slugify(mood.label)}`} className="pm-mood-item" onClick={onClose}>
+                <span className="pm-mood-icon">{mood.icon}</span>
+                <span className="pm-mood-label">{mood.label}</span>
+                <span className="pm-mood-count">{mood.count}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {searchQuery && searchResults.length > 0 && (
+          <div className="pm-search-results">
+            {searchResults.map(result => (
+              <Link
+                key={result._id}
+                to={`/product/${slugify(result.name)}`}
+                className="pm-result-item"
+                onClick={() => { onClose(); setSearchQuery(''); }}
+              >
+                <img src={resolveImageUrl(result.images?.[0])} alt={result.name} />
+                <div className="pm-result-meta">
+                  <span className="pm-result-name">{result.name}</span>
+                  <span className="pm-result-price">₹{result.basePrice}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   Main Header Component
+───────────────────────────────────────────── */
+const Header = ({
+  isScrolled,
+  showSearch,
+  setShowSearch,
+  searchQuery,
+  setSearchQuery,
+  searchResults,
+  openCart,
+  cartCount,
+  openAuth,
+  openDash,
+  user,
+  onLogout,
+  categories = [],
+  spaces = [],
+  styles = [],
+  collections = [],
+}) => {
+  const [activeMenu, setActiveMenu] = useState(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const menuTimeout = useRef(null);
+
+  const handleMenuEnter = (label) => {
+    clearTimeout(menuTimeout.current);
+    setActiveMenu(label);
+  };
+
+  const handleMenuLeave = () => {
+    menuTimeout.current = setTimeout(() => setActiveMenu(null), 120);
+  };
+
+  return (
+    <>
+      <header className={`pm-header${isScrolled ? ' pm-header--scrolled' : ''}`}>
+        {/* ── Top Bar ─────────────────────────── */}
+        <div className="pm-topbar">
+          <span className="pm-topbar-text">
+            Complimentary Art Consultation for Luxury Homes &amp; Designers
+          </span>
+          <Link to="/consultation" className="pm-topbar-cta">
+            Book Consultation
+          </Link>
+        </div>
+
+        {/* ── Main Nav Bar ─────────────────────── */}
+        <div className="pm-navbar">
+          {/* Left Logo */}
+          <Link to="/" className="pm-logo">
+            <span className="pm-logo-text">ARTCAFE</span>
+            <span className="pm-logo-sub">FINE ART PRINT HOUSE</span>
+          </Link>
+
+          {/* Right: Nav + Actions */}
+          <div className="pm-nav-right desktop-only">
+            <nav className="pm-nav-links-right">
+              {NAV_ITEMS.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="pm-nav-item"
+                  onMouseEnter={() => item.type === 'mega-menu' && handleMenuEnter(item.label)}
+                  onMouseLeave={handleMenuLeave}
+                >
+                  {item.url ? (
+                    <Link to={item.url} className="pm-nav-link">
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <button className="pm-nav-link pm-nav-link--btn">
+                      {item.label}
+                      <span className="pm-chevron"><ChevronDown /></span>
+                    </button>
+                  )}
+                  {item.type === 'mega-menu' && (
+                    <MegaMenuPanel
+                      item={item}
+                      isOpen={activeMenu === item.label}
+                      scrolled={isScrolled}
+                    />
+                  )}
+                </div>
+              ))}
+            </nav>
+
+            {/* Right Actions */}
+            <div className="pm-actions">
+              <button
+                className="pm-icon-btn"
+                onClick={() => setShowSearch(!showSearch)}
+                aria-label="Search"
+              >
+                <SearchIcon />
+              </button>
+              <Link to="/wishlist" className="pm-icon-btn" aria-label="Wishlist">
+                <HeartIcon />
+              </Link>
+              <button className="pm-icon-btn pm-cart-btn" onClick={openCart} aria-label="Cart">
+                <BagIcon />
+                {cartCount > 0 && <span className="pm-cart-badge">{cartCount}</span>}
+              </button>
+
+              {/* Gold Outlined CTA */}
+              <Link to="/consultation" className="pm-cta-outlined desktop-only">
+                Book Consultation
+              </Link>
+            </div>
+          </div>
+
+          {/* Mobile Controls */}
+          <div className="pm-mobile-controls mobile-only">
+            <button className="pm-icon-btn" onClick={() => setShowSearch(true)} aria-label="Search">
+              <SearchIcon />
+            </button>
+            <button className="pm-icon-btn pm-cart-btn" onClick={openCart} aria-label="Cart">
+              <BagIcon />
+              {cartCount > 0 && <span className="pm-cart-badge">{cartCount}</span>}
+            </button>
+            <button
+              className="pm-hamburger"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
+            >
+              <HamburgerIcon />
+            </button>
           </div>
         </div>
-      )}
-    </header>
+      </header>
+
+      {/* Mobile Drawer */}
+      <MobileDrawer
+        isOpen={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        cartCount={cartCount}
+        openCart={openCart}
+        showSearch={showSearch}
+        setShowSearch={setShowSearch}
+      />
+
+      {/* Search Overlay */}
+      <SearchOverlay
+        isOpen={showSearch}
+        onClose={() => { setShowSearch(false); setSearchQuery(''); }}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchResults={searchResults}
+      />
+    </>
   );
 };
 
 export default Header;
-

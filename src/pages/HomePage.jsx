@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { resolveImageUrl, slugify } from '../utils/helpers';
 import BASE_URL, { apiFetch } from '../api';
@@ -6,6 +6,20 @@ import BASE_URL, { apiFetch } from '../api';
 
 
 const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces = [], collections = [] }) => {
+  const homesScrollRef = useRef(null);
+  
+  const scrollHomes = (direction) => {
+    if (homesScrollRef.current) {
+      const cardWidth = 370;
+      const cardGap = 22;
+      const scrollAmount = cardWidth + cardGap;
+      homesScrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   const [sliderPos, setSliderPos] = useState(50);
   const dummyProducts = [
     { _id: 'd1', name: 'Golden Abstract I', basePrice: 12500, images: ['https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800'] },
@@ -291,88 +305,223 @@ const HomePage = ({ products, categories, caseStudies = [], styles = [], spaces 
           </div>
         </div>
       </div>
-      {/* SECTION 1: New Age Editorial Hero Slider */}
-      <section className="hero-editorial dark-texture-overlay">
-        {/* Dynamic ambient blur background */}
-        {actualCaseStudies[activeSlide] && (
-          <div 
-            className="ambient-blur-backdrop" 
-            style={{ 
-              backgroundImage: `url(${resolveImageUrl(actualCaseStudies[activeSlide].featuredImage || actualCaseStudies[activeSlide].image, actualCaseStudies[activeSlide]._id || actualCaseStudies[activeSlide].id)})` 
-            }}
-          />
-        )}
-
-        {actualCaseStudies.map((slide, index) => {
-          const slideId = slide._id || slide.id;
-          const slideTitle = slide.title;
-          const slideDescription = slide.description;
-          const slideImage = resolveImageUrl(slide.featuredImage || slide.image, slideId);
-          const slideTag = slide.tags?.[0] || slide.tag || "CASE STUDY";
-          const slideSubtitle = slide.tags?.[1] || slide.subtitle || "";
-          const slideMeta = slide.tags?.[2] || slide.meta || slide.client || "";
-
-          return (
-            <div
-              key={slideId}
-              className={`editorial-slide ${index === activeSlide ? 'active' : ''}`}
-            >
-              <div className="editorial-container container">
-                <div className="editorial-text-side">
-                  <div className="slide-counter">
-                    <span>0{index + 1}</span> / 0{actualCaseStudies.length}
-                  </div>
-                  <div className="editorial-header">
-                    <span className="editorial-tag">{slideTag}</span>
-                    <div className="editorial-title-wrapper">
-                      <h1 className="editorial-title-main">
-                        {slideTitle}
-                      </h1>
-                    </div>
-                    {slideMeta && <div className="editorial-meta-line">{slideMeta}</div>}
-                  </div>
-                  <p className="editorial-description">{slideDescription}</p>
-                  <div className="editorial-actions">
-                    <Link to="/shop" className="editorial-btn">{slide.primaryBtn || 'EXPLORE COLLECTION'}</Link>
-                    <button onClick={() => setSelectedCaseStudy(slide)} className="editorial-btn secondary" style={{ border: 'none', background: 'rgba(255,255,255,0.1)', cursor: 'pointer' }}>VIEW CASE STUDY</button>
-                  </div>
-                </div>
-
-                <div className="editorial-image-side">
-                  <div className="editorial-image-frame">
-                    <img src={slideImage} alt={slideTitle} />
-                    <div className="image-float-badge">{slideSubtitle || 'CURATED SELECTION'}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        <div className="editorial-pagination">
-          {actualCaseStudies.map((_, idx) => (
-            <button
-              key={idx}
-              className={`pagination-dot ${idx === activeSlide ? 'active' : ''}`}
-              onClick={() => setActiveSlide(idx)}
-            ></button>
-          ))}
+      {/* SECTION 1: Luxury Cinematic Hero */}
+      <section className="lch-hero">
+        {/* Background with slow Ken Burns zoom */}
+        <div className="lch-bg">
+          <div className="lch-bg-image" />
+          {/* Layered overlays */}
+          <div className="lch-overlay-linear" />
+          <div className="lch-overlay-radial" />
+          <div className="lch-overlay-vignette" />
         </div>
 
-        <div className="editorial-ticker">
-          <div className="ticker-inner">
-            <span>ARTCAFE EXCLUSIVE</span>
-            <span>MUSEUM GRADE PRINTS</span>
-            <span>WORLDWIDE SHIPPING</span>
-            <span>LIMITED EDITIONS</span>
-            <span>ARTCAFE EXCLUSIVE</span>
-            <span>MUSEUM GRADE PRINTS</span>
-            <span>WORLDWIDE SHIPPING</span>
-            <span>LIMITED EDITIONS</span>
-            <span>ARTCAFE EXCLUSIVE</span>
-            <span>MUSEUM GRADE PRINTS</span>
-            <span>WORLDWIDE SHIPPING</span>
-            <span>LIMITED EDITIONS</span>
+        {/* Main content container */}
+        <div className="lch-container">
+          {/* Left Editorial Content */}
+          <div className="lch-left">
+            <p className="lch-eyebrow">CURATED ART FOR LUXURY SPACES</p>
+            <h1 className="lch-heading">
+              Spaces That<br />
+              <span className="lch-heading-gold">Deserve More</span>
+            </h1>
+            <p className="lch-desc">
+              Museum-grade Indian art, handpicked for luxury homes, villas, architects and visionary interiors.
+            </p>
+            <div className="lch-buttons">
+              <Link to="/shop" className="lch-btn-gold">Explore Collections</Link>
+              <Link to="/consultation" className="lch-btn-glass">Book Free Consultation</Link>
+            </div>
+          </div>
+
+          {/* Right Floating Stats Panel */}
+          <div className="lch-right">
+            <div className="lch-panel">
+              {[
+                {
+                  icon: (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D0AE73" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/>
+                    </svg>
+                  ),
+                  number: '10,000+',
+                  label: 'Homes Styled'
+                },
+                {
+                  icon: (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D0AE73" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                    </svg>
+                  ),
+                  number: 'Architect',
+                  label: 'First Program'
+                },
+                {
+                  icon: (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D0AE73" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/><circle cx="12" cy="14" r="2"/>
+                    </svg>
+                  ),
+                  number: 'Museum Grade',
+                  label: 'Quality Promise'
+                },
+                {
+                  icon: (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D0AE73" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><circle cx="12" cy="16" r="2"/><circle cx="20" cy="16" r="2"/>
+                    </svg>
+                  ),
+                  number: 'Pan India',
+                  label: 'Installation'
+                }
+              ].map((stat, i, arr) => (
+                <div key={i} className={`lch-stat${i < arr.length - 1 ? ' lch-stat--border' : ''}`}>
+                  <div className="lch-stat-icon">{stat.icon}</div>
+                  <div className="lch-stat-text">
+                    <span className="lch-stat-number">{stat.number}</span>
+                    <span className="lch-stat-label">{stat.label}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Scroll Cue */}
+        <div className="lch-scroll-cue">
+          <span className="lch-scroll-text">SCROLL TO DISCOVER</span>
+          <div className="lch-scroll-circle">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8A96A" strokeWidth="2" strokeLinecap="round">
+              <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION: Trusted Brands */}
+      <section className="trusted-brands-section">
+        <div className="tb-container">
+          <div className="tb-top-content">
+            <p className="tb-eyebrow">TRUSTED BY INDIA'S FINEST SPACES</p>
+            <h2 className="tb-heading">Chosen By Luxury Homes,<br />Hotels &amp; Architects</h2>
+            <p className="tb-description">From premium residences to hospitality spaces, our curated art lives inside places built to inspire.</p>
+          </div>
+          <div className="tb-logo-strip">
+            {[
+              { name: "Taj Hotels", image: "/assets/logos/taj.svg", width: "96px" },
+              { name: "Marriott", image: "/assets/logos/marriott.svg", width: "132px" },
+              { name: "The Leela", image: "/assets/logos/leela.svg", width: "118px" },
+              { name: "Apollo Hospitals", image: "/assets/logos/apollo.svg", width: "108px" },
+              { name: "Prestige Group", image: "/assets/logos/prestige.svg", width: "124px" },
+              { name: "Sobha Realty", image: "/assets/logos/sobha.svg", width: "102px" },
+              { name: "DLF", image: "/assets/logos/dlf.svg", width: "74px" },
+              { name: "Brigade Group", image: "/assets/logos/brigade.svg", width: "118px" }
+            ].map((logo, index) => (
+              <div key={index} className="tb-logo-item" style={{ '--logo-w': logo.width }}>
+                <img src={logo.image} alt={logo.name} className="tb-logo-img" />
+              </div>
+            ))}
+          </div>
+          <div className="tb-bottom-statement">
+            Curated art for spaces where design matters.
+          </div>
+          <div className="tb-divider" />
+        </div>
+      </section>
+
+      {/* SECTION: Styled Real Homes */}
+      <section className="styled-real-homes-section">
+        <div className="srh-container">
+          {/* Left Column (Sticky Sidebar) */}
+          <div className="srh-left">
+            <div>
+              <p className="srh-eyebrow">CURATED INSPIRATION</p>
+              <h2 className="srh-heading">Art Styled Inside<br />Real Homes</h2>
+              <p className="srh-description">Explore how our art comes to life in beautiful spaces across the country.</p>
+              
+              <Link to="/spaces" className="srh-button">
+                View All Homes
+              </Link>
+            </div>
+
+            {/* Navigation Arrows positioned on bottom of left content on desktop */}
+            <div className="srh-navigation">
+              <button 
+                onClick={() => scrollHomes('left')} 
+                className="srh-nav-btn srh-nav-btn--left"
+                aria-label="Scroll left"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+              </button>
+              <button 
+                onClick={() => scrollHomes('right')} 
+                className="srh-nav-btn srh-nav-btn--right"
+                aria-label="Scroll right"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column (Horizontal Scroll Carousel) */}
+          <div className="srh-right" ref={homesScrollRef}>
+            {[
+              {
+                title: "Penthouse",
+                location: "HYDERABAD",
+                image: "/assets/homes/penthouse-hyderabad.jpg",
+                cta: "Shop The Space",
+                link: "/shop?space=penthouse"
+              },
+              {
+                title: "Villa",
+                location: "GOA",
+                image: "/assets/homes/villa-goa.jpg",
+                cta: "Shop The Space",
+                link: "/shop?space=villa"
+              },
+              {
+                title: "Luxury Apartment",
+                location: "MUMBAI",
+                image: "/assets/homes/luxury-apartment-mumbai.jpg",
+                cta: "Shop The Space",
+                link: "/shop?space=apartment"
+              },
+              {
+                title: "Modern Home",
+                location: "BANGALORE",
+                image: "/assets/homes/modern-home-bangalore.jpg",
+                cta: "Shop The Space",
+                link: "/shop?space=modern"
+              }
+            ].map((card, idx) => (
+              <div key={idx} className="srh-card">
+                <img src={card.image} alt={`${card.title} in ${card.location}`} className="srh-card-img" />
+                
+                {/* Overlay Layers */}
+                <div className="srh-card-overlay-linear" />
+                <div className="srh-card-overlay-glass" />
+                
+                {/* Card Content */}
+                <div className="srh-card-content">
+                  <span className="srh-card-location">{card.location}</span>
+                  <h3 className="srh-card-title">{card.title}</h3>
+                  <Link to={card.link} className="srh-card-cta">
+                    <span>{card.cta}</span>
+                    <svg className="srh-cta-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

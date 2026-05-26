@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="100%" height="100%">
+  <path d="M25 22 L45 22 L35 48 Z" fill="none" stroke="#B89A63" stroke-width="2"/>
+  <path d="M28 27 L42 27 L35 44 Z" fill="#1B1B1B"/>
+  <text x="60" y="44" font-family="'Cormorant Garamond', serif" font-size="26" font-weight="600" fill="#1B1B1B" letter-spacing="3">Prestige</text>
+  <text x="60" y="55" font-family="'Inter', sans-serif" font-size="7" font-weight="500" fill="#1B1B1B" letter-spacing="4">GROUP</text>
+</svg>

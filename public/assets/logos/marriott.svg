@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="100%" height="100%">
+  <path d="M30 20 L40 20 L47 45 L54 20 L64 20 L57 55 L47 55 Z" fill="#1B1B1B"/>
+  <path d="M15 20 H25 V55 H15 Z" fill="#B89A63" opacity="0.7"/>
+  <text x="75" y="44" font-family="'Inter', sans-serif" font-size="18" font-weight="700" fill="#1B1B1B" letter-spacing="3.5">MARRIOTT</text>
+</svg>

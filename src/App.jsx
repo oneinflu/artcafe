@@ -66,7 +66,7 @@ function App() {
   const [searchResults, setSearchResults] = useState([]);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
+    const handleScroll = () => setIsScrolled(window.scrollY > 80);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -183,7 +183,7 @@ function App() {
               onLogout={handleLogout}
             />
             
-            <main className="main-content" style={{ paddingTop: isScrolled ? '70px' : '90px' }}>
+            <main className="main-content" style={{ paddingTop: '0' }}>
               <Routes>
                 <Route path="/" element={<HomePage products={products} categories={categories} caseStudies={caseStudies} styles={styles} spaces={spaces} collections={collections} />} />
                 <Route path="/shop" element={

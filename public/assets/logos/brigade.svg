@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="100%" height="100%">
+  <g transform="translate(15, 22)">
+    <rect x="0" y="0" width="12" height="12" fill="#1B1B1B"/>
+    <rect x="16" y="0" width="12" height="12" fill="#B89A63"/>
+    <rect x="0" y="16" width="12" height="12" fill="#B89A63"/>
+    <rect x="16" y="16" width="12" height="12" fill="#1B1B1B"/>
+  </g>
+  <text x="55" y="40" font-family="'Inter', sans-serif" font-size="20" font-weight="700" fill="#1B1B1B" letter-spacing="2.5">BRIGADE</text>
+  <text x="55" y="52" font-family="'Inter', sans-serif" font-size="8" font-weight="500" fill="#1B1B1B" letter-spacing="3" opacity="0.6">GROUP</text>
+</svg>
