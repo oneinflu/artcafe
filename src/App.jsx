@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CartSidebar from './components/CartSidebar';
@@ -8,6 +9,8 @@ import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
+import OrderSuccessPage from './pages/OrderSuccessPage';
 import BulkOrdersPage from './pages/BulkOrdersPage';
 import RentalsPage from './pages/RentalsPage';
 
@@ -45,6 +48,126 @@ const ProtectedRoute = ({ children }) => {
   if (!token || user.role !== 'admin') return <Navigate to="/admin/login" />;
   return children;
 };
+
+function StorefrontLayout({
+  loading, categories, spaces, styles, collections, products, caseStudies,
+  cart, isCartOpen, setIsCartOpen, isAuthOpen, setIsAuthOpen,
+  isScrolled, showSearch, setShowSearch, searchQuery, setSearchQuery, searchResults,
+  user, handleLogout, updateQty, removeItem, addToCart, setCart,
+}) {
+  const location = useLocation();
+  const isShopOrProduct = location.pathname === '/shop' || location.pathname.startsWith('/product/') || location.pathname === '/cart' || location.pathname === '/checkout' || location.pathname === '/order-success';
+
+  return (
+    <div className="app-wrapper">
+      {loading ? (
+        <div style={{ padding: '120px 0', textAlign: 'center' }}>Loading...</div>
+      ) : (
+        <>
+          {!isShopOrProduct && (
+            <Header
+              categories={categories}
+              spaces={spaces}
+              styles={styles}
+              collections={collections}
+              cartCount={cart.length}
+              openCart={() => setIsCartOpen(true)}
+              openAuth={() => setIsAuthOpen(true)}
+              openDash={() => window.location.href = '/dashboard'}
+              isScrolled={isScrolled}
+              showSearch={showSearch}
+              setShowSearch={setShowSearch}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              searchResults={searchResults}
+              user={user}
+              onLogout={handleLogout}
+            />
+          )}
+
+          <main className="main-content" style={{ paddingTop: '0' }}>
+            <Routes>
+              <Route path="/" element={<HomePage products={products} categories={categories} caseStudies={caseStudies} styles={styles} spaces={spaces} collections={collections} />} />
+              <Route path="/shop" element={
+                <ShopPage
+                  products={products}
+                  categories={categories}
+                  spaces={spaces}
+                  styles={styles}
+                  collections={collections}
+                  cartCount={cart.length}
+                  openCart={() => setIsCartOpen(true)}
+                  openAuth={() => setIsAuthOpen(true)}
+                  user={user}
+                />
+              } />
+              <Route path="/rentals" element={<RentalsPage />} />
+              <Route path="/product/:slug" element={
+                <ProductDetailPage
+                  categories={categories}
+                  cartCount={cart.length}
+                  openCart={() => setIsCartOpen(true)}
+                  openAuth={() => setIsAuthOpen(true)}
+                  user={user}
+                  addToCart={addToCart}
+                />
+              } />
+              <Route path="/cart" element={
+                <CartPage 
+                  cart={cart} 
+                  updateQty={updateQty} 
+                  removeItem={removeItem}
+                  categories={categories}
+                  cartCount={cart.length}
+                  openCart={() => setIsCartOpen(true)}
+                  openAuth={() => setIsAuthOpen(true)}
+                  user={user}
+                  setCart={setCart}
+                />
+              } />
+              <Route path="/bulk" element={<BulkOrdersPage />} />
+              <Route path="/checkout" element={
+                <CheckoutPage
+                  cart={cart}
+                  updateQty={updateQty}
+                  removeItem={removeItem}
+                  categories={categories}
+                  cartCount={cart.length}
+                  openCart={() => setIsCartOpen(true)}
+                  openAuth={() => setIsAuthOpen(true)}
+                  user={user}
+                  setCart={setCart}
+                />
+              } />
+              <Route path="/order-success" element={
+                <OrderSuccessPage
+                  cart={cart}
+                  user={user}
+                />
+              } />
+            </Routes>
+          </main>
+
+          <Footer />
+
+          <CartSidebar
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+            cart={cart}
+            updateQty={updateQty}
+            removeItem={removeItem}
+          />
+
+          <AuthModal
+            isOpen={isAuthOpen}
+            onClose={() => setIsAuthOpen(false)}
+            onLogin={() => { setIsAuthOpen(false); }}
+          />
+        </>
+      )}
+    </div>
+  );
+}
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -116,6 +239,16 @@ function App() {
     window.location.href = '/';
   };
 
+  const addToCart = (item) => {
+    setCart(prev => {
+      const exists = prev.find(i => i.id === item.id);
+      if (exists) {
+        return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
+      }
+      return [...prev, item];
+    });
+  };
+
   const updateQty = (id, delta) => {
     setCart(prev =>
       prev
@@ -159,67 +292,32 @@ function App() {
 
         {/* Storefront Routes */}
         <Route path="*" element={
-          <div className="app-wrapper">
-            {loading ? (
-              <div style={{ padding: '120px 0', textAlign: 'center' }}>Loading...</div>
-            ) : (
-              <>
-            <Header 
-              categories={categories} 
-              spaces={spaces}
-              styles={styles}
-              collections={collections}
-              cartCount={cart.length} 
-              openCart={() => setIsCartOpen(true)}
-              openAuth={() => setIsAuthOpen(true)}
-              openDash={() => window.location.href = '/dashboard'} // Assuming dashboard exists or handled via modal
-              isScrolled={isScrolled}
-              showSearch={showSearch}
-              setShowSearch={setShowSearch}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              searchResults={searchResults}
-              user={user}
-              onLogout={handleLogout}
-            />
-            
-            <main className="main-content" style={{ paddingTop: '0' }}>
-              <Routes>
-                <Route path="/" element={<HomePage products={products} categories={categories} caseStudies={caseStudies} styles={styles} spaces={spaces} collections={collections} />} />
-                <Route path="/shop" element={
-                  <ShopPage 
-                    products={products} 
-                    categories={categories} 
-                    spaces={spaces} 
-                    styles={styles} 
-                    collections={collections} 
-                  />
-                } />
-                <Route path="/rentals" element={<RentalsPage />} />
-                <Route path="/product/:slug" element={<ProductDetailPage />} />
-                <Route path="/cart" element={<CartPage cart={cart} />} />
-                <Route path="/bulk" element={<BulkOrdersPage />} />
-              </Routes>
-            </main>
-
-            <Footer />
-            
-            <CartSidebar 
-              isOpen={isCartOpen} 
-              onClose={() => setIsCartOpen(false)} 
-              cart={cart}
-              updateQty={updateQty}
-              removeItem={removeItem}
-            />
-            
-            <AuthModal 
-              isOpen={isAuthOpen} 
-              onClose={() => setIsAuthOpen(false)} 
-              onLogin={(u) => { setUser(u); setIsAuthOpen(false); }}
-            />
-              </>
-            )}
-          </div>
+          <StorefrontLayout
+            loading={loading}
+            categories={categories}
+            spaces={spaces}
+            styles={styles}
+            collections={collections}
+            products={products}
+            caseStudies={caseStudies}
+            cart={cart}
+            isCartOpen={isCartOpen}
+            setIsCartOpen={setIsCartOpen}
+            isAuthOpen={isAuthOpen}
+            setIsAuthOpen={setIsAuthOpen}
+            isScrolled={isScrolled}
+            showSearch={showSearch}
+            setShowSearch={setShowSearch}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            searchResults={searchResults}
+            user={user}
+            handleLogout={handleLogout}
+            updateQty={updateQty}
+            removeItem={removeItem}
+            addToCart={addToCart}
+            setCart={setCart}
+          />
         } />
       </Routes>
     </Router>
